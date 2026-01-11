@@ -48,7 +48,7 @@ public class TeamService {
             tp.setStatus(TeamPlayerStatus.ACTIVE);
             teamPlayerRepository.save(tp);
 
-            return new ApiResponse<>("Команда создана", getTeamWithPlayers(team.getId(), selfPlayerId).getData(), false);
+            return new ApiResponse<>("Команда создана", getTeamWithPlayers(team.getId()).getData(), false);
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка при создании команды: " + ex.getMessage(), null, true);
         }
@@ -81,7 +81,7 @@ public class TeamService {
             }
 
             teamPlayerRepository.save(tp);
-            return new ApiResponse<>("Игрок добавлен в команду", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+            return new ApiResponse<>("Игрок добавлен в команду", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка при добавлении в команду: " + ex.getMessage(), null, true);
         }
@@ -107,7 +107,7 @@ public class TeamService {
             tp.setStatus(approve ? TeamPlayerStatus.ACTIVE : TeamPlayerStatus.CANCELED);
             teamPlayerRepository.save(tp);
 
-            return new ApiResponse<>("Заявка обработана", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+            return new ApiResponse<>("Заявка обработана", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка при обработке заявки: " + ex.getMessage(), null, true);
         }
@@ -120,8 +120,8 @@ public class TeamService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
         // Храним токен в Redis на 1 час
-        redisTemplate.opsForValue().set("invite:" + token, teamId, Duration.ofHours(1));
-        return "https://mygame.com/join?token=" + token;
+        redisTemplate.opsForValue().set("invite:" + token, teamId, Duration.ofHours(24));
+        return token;
     }
 
     // ------------------ Присоединение по токену ------------------
@@ -161,7 +161,7 @@ public class TeamService {
                     teamRepository.save(team);
                     tp.setStatus(TeamPlayerStatus.LEAVED);
                     teamPlayerRepository.save(tp);
-                    return new ApiResponse<>("Капитан вышел, команда удалена", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+                    return new ApiResponse<>("Капитан вышел, команда удалена", getTeamWithPlayers(teamId).getData(), false);
                 } else {
                     // рандомно новый капитан
                     TeamPlayer newCaptain = others.get(random.nextInt(others.size()));
@@ -170,12 +170,12 @@ public class TeamService {
 
                     tp.setStatus(TeamPlayerStatus.LEAVED);
                     teamPlayerRepository.save(tp);
-                    return new ApiResponse<>("Капитан вышел, назначен новый капитан", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+                    return new ApiResponse<>("Капитан вышел, назначен новый капитан", getTeamWithPlayers(teamId).getData(), false);
                 }
             } else {
                 tp.setStatus(kicked ? TeamPlayerStatus.KICKED : TeamPlayerStatus.LEAVED);
                 teamPlayerRepository.save(tp);
-                return new ApiResponse<>("Игрок удалён из команды", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+                return new ApiResponse<>("Игрок удалён из команды", getTeamWithPlayers(teamId).getData(), false);
             }
 
         } catch (Exception ex) {
@@ -198,14 +198,14 @@ public class TeamService {
             for (TeamPlayer tp : players) tp.setCaptain(tp.getPlayer().getId().equals(newCaptainId));
             teamPlayerRepository.saveAll(players);
 
-            return new ApiResponse<>("Капитан передан", getTeamWithPlayers(teamId, selfPlayerId).getData(), false);
+            return new ApiResponse<>("Капитан передан", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка при передаче капитана: " + ex.getMessage(), null, true);
         }
     }
 
     // ------------------ Получение команды с ACTIVE игроками ------------------
-    public ApiResponse<TeamDto> getTeamWithPlayers(Long teamId, Long selfPlayerId) {
+    public ApiResponse<TeamDto> getTeamWithPlayers(Long teamId) {
         try {
             Team team = teamRepository.findById(teamId)
                     .orElseThrow(() -> new Exception("Команда не найдена"));
@@ -223,6 +223,15 @@ public class TeamService {
 
     public ApiResponse<List<TeamDto>> searchTeams(String query) {
         try {
+            String key = "search:teams:" + query.toLowerCase();
+
+            // 1️⃣ Проверяем кеш
+            List<TeamDto> cachedTeams = (List<TeamDto>) redisTemplate.opsForValue().get(key);
+            if (cachedTeams != null) {
+                return new ApiResponse<>("Команды найдены (из кеша)", cachedTeams, false);
+            }
+
+            // 2️⃣ Ищем в базе
             List<TeamDto> teams = teamRepository
                     .findByNameContainingIgnoreCase(query)
                     .stream()
@@ -236,21 +245,21 @@ public class TeamService {
                     })
                     .toList();
 
-            return new ApiResponse<>(
-                    "Команды найдены",
-                    teams,
-                    false
-            );
+            // 3️⃣ Сохраняем в кеш (TTL 5 минут)
+            redisTemplate.opsForValue().set(key, teams, Duration.ofMinutes(5));
+
+            return new ApiResponse<>("Команды найдены", teams, false);
+
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка поиска команд: " + ex.getMessage(), null, true);
         }
     }
 
+
     private TeamDto mapToTeamDto(Team team, List<TeamPlayer> members) {
         List<TeamPlayerSummaryDto> playerDtos = members.stream()
                 .map(tp -> new TeamPlayerSummaryDto(tp.getPlayer().getId(),
                         tp.getPlayer().getNickname(),
-                        tp.getPlayer().getLinks(),
                         tp.isCaptain(),
                         tp.getStatus()))
                 .toList();

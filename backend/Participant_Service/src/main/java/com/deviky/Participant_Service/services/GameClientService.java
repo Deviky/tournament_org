@@ -1,7 +1,10 @@
 package com.deviky.Participant_Service.services;
 
+import com.deviky.Participant_Service.dto.ApiResponse;
 import com.deviky.Participant_Service.dto.Game;
+import com.deviky.Participant_Service.models.Player;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.stereotype.Service;
@@ -28,4 +31,22 @@ public class GameClientService {
             throw new RuntimeException("Ошибка при получении buhs: " + e.getMessage());
         }
     }
+
+    // Проверка игрока через Game Service
+    public ApiResponse<Void> checkPlayer(Player player) {
+        try {
+            return getWebClient().post()
+                    .uri("/api/game/check-player")
+                    .bodyValue(player)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError,
+                            response -> response.bodyToMono(String.class)
+                                    .map(msg -> new RuntimeException("Ошибка при проверке игрока: " + msg)))
+                    .bodyToMono(new ParameterizedTypeReference<ApiResponse<Void>>() {})
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка при проверке игрока: " + e.getMessage());
+        }
+    }
+
 }

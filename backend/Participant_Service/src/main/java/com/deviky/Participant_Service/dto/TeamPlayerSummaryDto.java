@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class TeamPlayerSummaryDto {
     private Long id;
     private String nickname;
-    private String links;
     private boolean isCaptain;
     private TeamPlayerStatus status;
 }

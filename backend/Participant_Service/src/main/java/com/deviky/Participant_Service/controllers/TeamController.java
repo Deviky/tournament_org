@@ -83,5 +83,11 @@ public class TeamController {
         ApiResponse<TeamDto> response = teamService.transferCaptain(teamId, newCaptainId, getSelfPlayerIdFromHeader(selfId));
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
+
+    @GetMapping("/{teamId}")
+    public ResponseEntity<ApiResponse<TeamDto>> getTeam(@PathVariable Long teamId) {
+        ApiResponse<TeamDto> response = teamService.getTeamWithPlayers(teamId);
+        return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
+    }
 }
 

@@ -1,7 +1,10 @@
 package com.deviky.Game_Service.models;
 
+import com.deviky.Game_Service.dto.Player;
+import com.deviky.Game_Service.dto.PlayerGameInfo;
 import com.deviky.Game_Service.dto.Team;
 import com.deviky.Game_Service.dto.Tournament;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -65,23 +68,38 @@ public abstract class Game {
         return (Class<?>) pt.getActualTypeArguments()[0];
     }
 
+    private static final ObjectMapper mapper = new ObjectMapper();
+
     protected Object cast(String value, Class<?> type) {
+
         if (type == int.class || type == Integer.class)
             return Integer.parseInt(value);
+
         if (type == long.class || type == Long.class)
             return Long.parseLong(value);
+
         if (type == boolean.class || type == Boolean.class)
             return Boolean.parseBoolean(value);
+
         if (type == double.class || type == Double.class)
             return Double.parseDouble(value);
+
         if (type == String.class)
             return value;
 
-        throw new IllegalArgumentException("Unsupported param type: " + type);
+        try {
+            return mapper.readValue(value, type);
+        } catch (Exception e) {
+            throw new IllegalArgumentException(
+                    "Cannot parse JSON to " + type.getName() + ": " + value,
+                    e
+            );
+        }
     }
 
-    public abstract boolean isTeamCorrect(Team team);
-    public abstract boolean isTournamentCreateCorrect(Tournament tournament);
-    public abstract boolean isTournamentStartCorrect(Tournament tournament);
+    public abstract CheckResult isPlayerCorrect(PlayerGameInfo playerGameInfo);
+    public abstract CheckResult isTeamCorrect(Team team);
+    public abstract CheckResult isTournamentCreateCorrect(Tournament tournament);
+    public abstract CheckResult isTournamentStartCorrect(Tournament tournament);
     public abstract List<String> getBracketAlgorithmsSupported();
 }

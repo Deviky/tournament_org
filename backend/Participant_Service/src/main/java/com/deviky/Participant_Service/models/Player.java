@@ -10,6 +10,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(schema = "participant", name = "player_profile")
 @Data
@@ -22,7 +25,12 @@ public class Player {
     @Column(nullable = false, length = 50)
     private String nickname;
 
-    @Column(columnDefinition = "jsonb")
-    @JdbcTypeCode(SqlTypes.JSON)
-    private String links;
+    @ElementCollection
+    @CollectionTable(
+            schema = "participant",
+            name = "player_games",
+            joinColumns = @JoinColumn(name = "player_id")
+    )
+    @OrderBy("gameId ASC")
+    private List<PlayerGameInfo> games = new ArrayList<>();
 }

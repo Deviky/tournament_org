@@ -34,7 +34,7 @@ public class PlayerController {
             @PathVariable Long playerId,
             @RequestHeader("X-Self-Player-Id") Long selfPlayerId
     ) {
-        ApiResponse<PlayerDto> response = playerService.getPlayerWithTeams(playerId, selfPlayerId);
+        ApiResponse<PlayerDto> response = playerService.getPlayerWithTeams(playerId);
         HttpStatus status = response.isError() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
         return ResponseEntity.status(status).body(response);
     }
