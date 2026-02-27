@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.deviky.Participant_Service.models.Player;
@@ -21,7 +20,6 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
     private final TeamPlayerRepository teamPlayerRepository;
-    private final TeamRepository teamRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final GameClientService gameClientService;
 
@@ -127,7 +125,7 @@ public class PlayerService {
         return new PlayerDto(
                 player.getId(),
                 player.getNickname(),
-                player.getGames(),   // ✅ ВАЖНО
+                player.getGames(),
                 teams
         );
     }

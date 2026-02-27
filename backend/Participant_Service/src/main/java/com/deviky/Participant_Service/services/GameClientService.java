@@ -28,7 +28,7 @@ public class GameClientService {
                     .bodyToMono(Game.class)
                     .block();
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка при получении buhs: " + e.getMessage());
+            throw new RuntimeException("Ошибка при получении игры: " + e.getMessage());
         }
     }
 
@@ -39,13 +39,10 @@ public class GameClientService {
                     .uri("/api/game/check-player")
                     .bodyValue(player)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError,
-                            response -> response.bodyToMono(String.class)
-                                    .map(msg -> new RuntimeException("Ошибка при проверке игрока: " + msg)))
                     .bodyToMono(new ParameterizedTypeReference<ApiResponse<Void>>() {})
                     .block();
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка при проверке игрока: " + e.getMessage());
+            return new ApiResponse<>("Ошибка при проверке игрока: " + e.getMessage(), null, true);
         }
     }
 

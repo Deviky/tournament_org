@@ -33,6 +33,10 @@ public class TeamService {
                     .orElseThrow(() -> new Exception("Игрок не найден"));
 
             Game game = gameClientService.getGame(request.getGameId());
+            if (game == null){
+                return new ApiResponse<>("Ошибка при создании команды: данной игры не существует", null, true);
+            }
+
             Team team = new Team();
             team.setName(request.getName());
             team.setGameId(request.getGameId());

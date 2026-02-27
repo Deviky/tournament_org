@@ -13,10 +13,26 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Notification_Service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Notification_Service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Participant_Service" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/backend/Participant_Service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Tournament_Service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Tournament_Service" />
           </set>
         </option>
       </GradleProjectSettings>

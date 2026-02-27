@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: Tournament_Service
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Tournament_org
+    username: postgres
+    password: 915327
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  redis:
+    host: localhost
+    port: 6379
+    password: 915327
+    database: 0
+
+server:
+  port: 8073
+
+logging:
+  level:
+    org:
+      springframework:
+        web: DEBUG
+    root: INFO
