@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Table(schema = "tournament", name = "tournament_teams")
 public class TournamentTeam {
 
     @EmbeddedId
@@ -22,7 +23,7 @@ public class TournamentTeam {
     @MapsId("tournamentId")
     @JoinColumn(name = "tournament_id")
     private Tournament tournament;
-
+    @Column(name = "registered_at")
     private LocalDateTime registeredAt;
 
     private TournamentTeamStatus status;

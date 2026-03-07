@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/participant/teams")
 @RequiredArgsConstructor
@@ -78,6 +80,12 @@ public class TeamController {
     @GetMapping("/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> getTeam(@PathVariable Long teamId) {
         ApiResponse<TeamDto> response = teamService.getTeamWithPlayers(teamId);
+        return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/get/teams/byIds")
+    public ResponseEntity<ApiResponse<List<TeamDto>>> getTeamsByIds(@RequestBody List<Long> teamId) {
+        ApiResponse<List<TeamDto>> response = teamService.getTeamsWithPlayersByIds(teamId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 }

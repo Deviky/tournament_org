@@ -13,6 +13,14 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Match_Service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Match_Service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Notification_Service" />
         <option name="modules">
           <set>

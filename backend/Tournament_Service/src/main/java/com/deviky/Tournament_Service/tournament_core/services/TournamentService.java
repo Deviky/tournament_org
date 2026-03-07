@@ -711,4 +711,19 @@ public class TournamentService {
         return new ApiResponse<>("Турнир заблокирован", null, false);
     }
 
+    public ApiResponse<Void> checkTournamentMatchCreate(Long tournamentId, Long organizerId){
+        Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+        if (tournament == null)
+            return new ApiResponse<>("Турнир не найден", null, true);
+
+        if (!tournament.getOrganizerId().equals(organizerId))
+            return new ApiResponse<>("Вы не являетесь организатором данного турнира", null, true);
+
+        if (!(tournament.getStatus() == TournamentStatus.RUNNING || tournament.getStatus() == TournamentStatus.REGISTRATION_CLOSED))
+            return new ApiResponse<>("Нельзя создать матч для данного турнира с текущим статусом", null, true);
+
+        return new ApiResponse<>("", null, false);
+    }
+
 }

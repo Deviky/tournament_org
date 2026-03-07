@@ -1,4 +1,4 @@
-package com.deviky.Tournament_Service.tournament_core.models;
+package com.deviky.Match_Service.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -14,9 +14,9 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class TournamentTeamId implements Serializable {
-    @Column(name = "tournament_id")
-    private Long tournamentId;
+public class MatchTeamId implements Serializable {
+    @Column(name = "match_id")
+    Long matchId;
     @Column(name = "team_id")
-    private Long teamId;
+    Long teamId;
 }

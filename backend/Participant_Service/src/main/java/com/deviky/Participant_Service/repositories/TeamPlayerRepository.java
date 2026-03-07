@@ -2,6 +2,7 @@ package com.deviky.Participant_Service.repositories;
 
 import com.deviky.Participant_Service.models.TeamPlayer;
 import com.deviky.Participant_Service.models.TeamPlayerId;
+import com.deviky.Participant_Service.models.TeamPlayerStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +18,6 @@ public interface TeamPlayerRepository extends JpaRepository<TeamPlayer, TeamPlay
     Optional<TeamPlayer> findByPlayerIdAndTeam_GameId(Long playerId, Integer gameId);
 
     void deleteByPlayerId(Long playerId);
+
+    List<TeamPlayer> findByTeamIdIn(List<Long> teamIds);
 }

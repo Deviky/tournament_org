@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -222,6 +223,40 @@ public class TeamService {
             return new ApiResponse<>("Команда найдена", mapToTeamDto(team, activeMembers), false);
         } catch (Exception ex) {
             return new ApiResponse<>("Ошибка при получении команды: " + ex.getMessage(), null, true);
+        }
+    }
+
+    // ------------------ Получение команд с ACTIVE игроками ------------------
+    public ApiResponse<List<TeamDto>> getTeamsWithPlayersByIds(List<Long> teamIds) {
+        try {
+            if (teamIds == null || teamIds.isEmpty()) {
+                return new ApiResponse<>("Список ID команд пуст", null, true);
+            }
+
+            List<Team> teams = teamRepository.findAllById(teamIds);
+
+            if (teams.isEmpty()) {
+                return new ApiResponse<>("Команды не найдены", null, true);
+            }
+
+            // Получаем всех игроков для всех команд одним запросом
+            List<TeamPlayer> allTeamPlayers = teamPlayerRepository.findByTeamIdIn(teamIds);
+
+            // Группируем игроков по командам и фильтруем только ACTIVE
+            Map<Long, List<TeamPlayer>> playersByTeamId = allTeamPlayers.stream()
+                    .filter(tp -> tp.getStatus() == TeamPlayerStatus.ACTIVE)
+                    .collect(Collectors.groupingBy(tp -> tp.getTeam().getId()));
+
+            List<TeamDto> teamDtos = teams.stream()
+                    .map(team -> {
+                        List<TeamPlayer> activeMembers = playersByTeamId.getOrDefault(team.getId(), Collections.emptyList());
+                        return mapToTeamDto(team, activeMembers);
+                    })
+                    .collect(Collectors.toList());
+
+            return new ApiResponse<>("Команды найдены", teamDtos, false);
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при получении команд: " + ex.getMessage(), null, true);
         }
     }
 

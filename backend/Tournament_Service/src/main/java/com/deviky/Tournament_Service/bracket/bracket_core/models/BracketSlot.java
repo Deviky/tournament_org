@@ -10,5 +10,5 @@ import lombok.NoArgsConstructor;
 public class BracketSlot {
     Long teamId;
     Long refMatchId;
-    RequiredMatchResult requiredMatchResult;
+    MatchTeamResult matchTeamResult;
 }

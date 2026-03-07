@@ -58,8 +58,8 @@ public class SingleEliminationAlgorithm implements BracketAlgorithm {
                 BracketMatch match = new BracketMatch(
                         matchId++,
                         List.of(
-                                new BracketSlot(null, m1.getMatchId(), RequiredMatchResult.WINNER),
-                                new BracketSlot(null, m2.getMatchId(), RequiredMatchResult.WINNER)
+                                new BracketSlot(null, m1.getMatchId(), MatchTeamResult.WINNER),
+                                new BracketSlot(null, m2.getMatchId(), MatchTeamResult.WINNER)
                         )
                 );
 
@@ -81,8 +81,8 @@ public class SingleEliminationAlgorithm implements BracketAlgorithm {
     public Bracket update(MatchResult matchResult, Bracket bracket) {
         // 1. Определяем победителя матча
         Long winnerId = null;
-        for (Map.Entry<Long, RequiredMatchResult> entry : matchResult.getTeamsResult().entrySet()) {
-            if (entry.getValue() == RequiredMatchResult.WINNER) {
+        for (Map.Entry<Long, MatchTeamResult> entry : matchResult.getTeamsResults().entrySet()) {
+            if (entry.getValue() == MatchTeamResult.WINNER) {
                 winnerId = entry.getKey();
                 break;
             }
@@ -96,7 +96,7 @@ public class SingleEliminationAlgorithm implements BracketAlgorithm {
         for (BracketGroup group : bracket.getBracketGroups()) {
             for (BracketMatch match : group.getMatches()) {
                 for (BracketSlot slot : match.getSlots()) {
-                    if (slot.getRefMatchId() != null && slot.getRefMatchId().equals(matchResult.getMatchId()) && slot.getRequiredMatchResult().equals(RequiredMatchResult.WINNER)) {
+                    if (slot.getRefMatchId() != null && slot.getRefMatchId().equals(matchResult.getMatchId()) && slot.getMatchTeamResult().equals(MatchTeamResult.WINNER)) {
                         slot.setTeamId(winnerId);
                     }
                 }

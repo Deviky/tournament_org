@@ -7,5 +7,5 @@ import java.util.Map;
 @Data
 public class MatchResult {
     Long matchId;
-    Map<Long, RequiredMatchResult> teamsResult;
+    Map<Long, MatchTeamResult> teamsResults;
 }

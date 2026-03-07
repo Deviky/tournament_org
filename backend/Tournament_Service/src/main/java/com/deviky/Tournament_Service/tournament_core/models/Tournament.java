@@ -16,11 +16,13 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Table(schema = "tournament", name = "tournament")
 public class Tournament {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     Long id;
     @Nonnull
+    @Column(name = "organizer_id")
     Long organizerId;
     @Nonnull
     Integer gameId;
@@ -28,14 +30,19 @@ public class Tournament {
     String name;
     @Nonnull
     String description;
+    @Column(name = "min_teams")
     Integer minTeams;
+    @Column(name = "max_teams")
     Integer maxTeams;
     String bracket;
     @Nonnull
     TournamentType type;
     @Nonnull
     TournamentStatus status;
+    @Nonnull
+    @Column(name = "start_at")
     LocalDateTime startAt;
+    @Column(name = "end_at")
     LocalDateTime endAt;
     @OneToMany(
             mappedBy = "tournament",

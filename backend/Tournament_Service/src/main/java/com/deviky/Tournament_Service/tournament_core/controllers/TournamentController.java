@@ -274,4 +274,17 @@ public class TournamentController {
                 .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
                 .body(response);
     }
+
+    @GetMapping("/{tournamentId}/create_match_check")
+    public ResponseEntity<ApiResponse<Void>> checkTournamentCreateMatch(
+            @PathVariable Long tournamentId,
+            @RequestParam Long organizerId) {
+
+        ApiResponse<Void> response =
+                tournamentService.checkTournamentMatchCreate(tournamentId, organizerId);
+
+        return ResponseEntity
+                .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
+                .body(response);
+    }
 }
