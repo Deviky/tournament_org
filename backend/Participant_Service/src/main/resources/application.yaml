@@ -1,6 +1,9 @@
 spring:
   application:
-    name: Participant_Service
+    name: PARTICIPANT-SERVICE
+
+  config:
+    import: optional:configserver:http://localhost:8888
 
   datasource:
     url: jdbc:postgresql://localhost:5432/Tournament_org
@@ -24,7 +27,7 @@ spring:
     database: 0
 
 server:
-  port: 8070
+  port: 8072
 
 logging:
   level:
@@ -32,3 +35,10 @@ logging:
       springframework:
         web: DEBUG
     root: INFO
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka

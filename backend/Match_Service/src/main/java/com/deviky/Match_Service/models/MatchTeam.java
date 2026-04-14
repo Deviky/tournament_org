@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @Table(schema = "match", name = "match_teams")
 public class MatchTeam {
+    @Id
     MatchTeamId id;
     MatchTeamResult result;
     @ManyToOne(fetch = FetchType.LAZY)

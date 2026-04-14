@@ -8,6 +8,8 @@ import com.deviky.Participant_Service.repositories.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.security.SecureRandom;
@@ -33,9 +35,9 @@ public class TeamService {
             Player creator = playerRepository.findById(selfPlayerId)
                     .orElseThrow(() -> new Exception("Игрок не найден"));
 
-            Game game = gameClientService.getGame(request.getGameId());
-            if (game == null){
-                return new ApiResponse<>("Ошибка при создании команды: данной игры не существует", null, true);
+            ApiResponse<Game> gameResponse = gameClientService.getGame(request.getGameId());
+            if (gameResponse.isError()){
+                return new ApiResponse<>(gameResponse.getMessage(), null, true);
             }
 
             Team team = new Team();
@@ -60,6 +62,7 @@ public class TeamService {
     }
 
     // ------------------ Добавление игрока в команду ------------------
+    @Transactional
     public ApiResponse<TeamDto> addPlayerToTeam(Long teamId, Long selfPlayerId) {
         try {
             Player player = playerRepository.findById(selfPlayerId)
@@ -86,13 +89,22 @@ public class TeamService {
             }
 
             teamPlayerRepository.save(tp);
+            if (team.getType() == TeamType.PUBLIC) {
+                ApiResponse<Void> checkTeamCorrectResponse = gameClientService.checkTeamCorrect(getTeamWithPlayers(team.getId()).getData());
+                if (checkTeamCorrectResponse.isError()){
+                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                    return new ApiResponse<>(checkTeamCorrectResponse.getMessage(), null, true);
+                }
+            }
             return new ApiResponse<>("Игрок добавлен в команду", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return new ApiResponse<>("Ошибка при добавлении в команду: " + ex.getMessage(), null, true);
         }
     }
 
     // ------------------ Принятие/отклонение заявки ------------------
+    @Transactional
     public ApiResponse<TeamDto> handleRequest(Long teamId, Long playerId, Long selfPlayerId, boolean approve) {
         try {
             TeamPlayer captain = teamPlayerRepository.findById(new TeamPlayerId(selfPlayerId, teamId))
@@ -112,8 +124,14 @@ public class TeamService {
             tp.setStatus(approve ? TeamPlayerStatus.ACTIVE : TeamPlayerStatus.CANCELED);
             teamPlayerRepository.save(tp);
 
+            ApiResponse<Void> checkTeamCorrectResponse = gameClientService.checkTeamCorrect(getTeamWithPlayers(tp.getTeam().getId()).getData());
+            if (checkTeamCorrectResponse.isError()){
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return new ApiResponse<>(checkTeamCorrectResponse.getMessage(), null, true);
+            }
             return new ApiResponse<>("Заявка обработана", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return new ApiResponse<>("Ошибка при обработке заявки: " + ex.getMessage(), null, true);
         }
     }

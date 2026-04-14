@@ -25,16 +25,26 @@ repositories {
 	maven { url = uri("https://repo.spring.io/snapshot") }
 }
 
+extra["springCloudVersion"] = "2025.0.1"
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.cloud:spring-cloud-starter-config")
+	implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.projectlombok:lombok")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+dependencyManagement {
+	imports {
+		mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+	}
 }
 
 tasks.withType<Test> {

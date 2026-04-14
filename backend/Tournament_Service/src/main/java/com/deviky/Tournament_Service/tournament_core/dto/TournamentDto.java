@@ -30,4 +30,6 @@ public class TournamentDto {
     LocalDateTime endAt;
     Organization organization;
     List<Team> teams;
+    List<Match> matches;
+    Game game;
 }

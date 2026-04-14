@@ -1,6 +1,13 @@
 spring:
   application:
-    name: Game_Service
+    name: GAME-SERVICE
+  config:
+    import: optional:configserver:http://localhost:8888
+
+  output:
+    ansi:
+      enabled: always
+
 
   datasource:
     url: jdbc:postgresql://localhost:5432/Tournament_org
@@ -18,11 +25,18 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 server:
-  port: 8071
+  port: 8069
+
+# Настройки логирования
+debug: true
 
 logging:
   level:
-    org:
-      springframework:
-        web: DEBUG
     root: INFO
+    org.springframework: INFO
+    org.springframework.web: DEBUG
+    com.deviky: DEBUG  # Логи для вашего пакета
+    com.deviky.Game_Service.game_core.models: DEBUG
+    com.deviky.Game_Service.game_core.services: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

@@ -5,14 +5,17 @@ import com.deviky.Participant_Service.models.*;
 import com.deviky.Participant_Service.repositories.PlayerRepository;
 import com.deviky.Participant_Service.repositories.TeamPlayerRepository;
 import com.deviky.Participant_Service.repositories.TeamRepository;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.deviky.Participant_Service.models.Player;
 import com.deviky.Participant_Service.models.TeamPlayer;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +25,9 @@ public class PlayerService {
     private final TeamPlayerRepository teamPlayerRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final GameClientService gameClientService;
+    private final IntegrationClientService integrationClientService;
 
+    @Transactional
     public ApiResponse<PlayerDto> createPlayer(CreatePlayerRequest dto) {
         try {
             Player player = new Player();
@@ -71,7 +76,33 @@ public class PlayerService {
             Player player = playerRepository.findById(playerId)
                     .orElseThrow(() -> new Exception("Игрок не найден"));
             List<TeamPlayer> memberships = teamPlayerRepository.findByPlayerId(playerId);
-            return new ApiResponse<>("Игрок найден", mapToPlayerDto(player, memberships), false);
+
+            List<PlayerGameInfo> gameInfos = player.getGames();
+
+            List<PlayerStatisticDto> statisticDtos = new ArrayList<>();
+
+            for (PlayerGameInfo gameInfo: gameInfos){
+                List<String> links = gameInfo.getLinks().values().stream().toList();
+                if (links.isEmpty())
+                    continue;
+                ApiResponse<List<JsonNode>> response =
+                        integrationClientService.getPlayerStatistic(links);
+
+                if (response != null && response.getData() != null) {
+                    statisticDtos.add(new PlayerStatisticDto(
+                            gameInfo.getGameId(),
+                            response.getData()
+                    ));
+                }
+            }
+
+
+            PlayerDto playerDto = mapToPlayerDto(player, memberships);
+
+            playerDto.setStatistics(statisticDtos);
+
+
+            return new ApiResponse<>("Игрок найден", playerDto, false);
         } catch (Exception ex) {
             return new ApiResponse<>(ex.getMessage(), null, true);
         }
@@ -122,12 +153,13 @@ public class PlayerService {
                 ))
                 .toList();
 
-        return new PlayerDto(
-                player.getId(),
-                player.getNickname(),
-                player.getGames(),
-                teams
-        );
+        return PlayerDto.builder()
+                .id(player.getId())
+                .nickname(player.getNickname())
+                .games(player.getGames())
+                .teams(teams)
+                .statistics(new ArrayList<>()) // можно пустой список по умолчанию
+                .build();
     }
 }
 

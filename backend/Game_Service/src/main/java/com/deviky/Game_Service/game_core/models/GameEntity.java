@@ -16,7 +16,7 @@ import java.util.List;
 public class GameEntity {
     @Id
     @Column(name = "id")
-    int id;
+    Integer id;
     @Column(name = "name")
     String name;
     @Column(name = "description")

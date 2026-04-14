@@ -1,6 +1,5 @@
 package com.deviky.Tournament_Service.tournament_core.controllers;
 
-import com.deviky.Tournament_Service.bracket.bracket_core.algorithm_base.AlgorithmParams;
 import com.deviky.Tournament_Service.bracket.bracket_core.models.*;
 import com.deviky.Tournament_Service.tournament_core.dto.*;
 import com.deviky.Tournament_Service.tournament_core.services.TournamentService;
@@ -24,8 +23,9 @@ public class TournamentController {
     // 🎮 Алгоритмы сетки
     // ==============================
 
-    @GetMapping("/games/{gameId}/algorithms")
+    @GetMapping("/organizer/games/{gameId}/algorithms")
     public ResponseEntity<ApiResponse<Map<String, ObjectNode>>> getAlgorithms(
+            @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Integer gameId) {
 
         ApiResponse<Map<String, ObjectNode>> response =
@@ -40,19 +40,20 @@ public class TournamentController {
     // 🏆 Создание / обновление турнира
     // ==============================
 
-    @PostMapping
+    @PostMapping("/organizer/create")
     public ResponseEntity<ApiResponse<TournamentDto>> createTournament(
+            @RequestHeader("X-User-Id") Long organizerId,
             @RequestBody TournamentCreateDto dto) {
 
         ApiResponse<TournamentDto> response =
-                tournamentService.createTournament(dto);
+                tournamentService.createTournament(dto, organizerId);
 
         return ResponseEntity
                 .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
                 .body(response);
     }
 
-    @PutMapping("/{tournamentId}")
+    @PutMapping("/organizer/update/{tournamentId}")
     public ResponseEntity<ApiResponse<TournamentDto>> updateTournament(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId,
@@ -70,7 +71,7 @@ public class TournamentController {
     // 📋 Получение турниров
     // ==============================
 
-    @GetMapping
+    @GetMapping("/public/get")
     public ResponseEntity<ApiResponse<List<TournamentDto>>> getAll() {
 
         ApiResponse<List<TournamentDto>> response =
@@ -79,7 +80,7 @@ public class TournamentController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/games/{gameId}")
+    @GetMapping("/public/get_by_game/{gameId}")
     public ResponseEntity<ApiResponse<List<TournamentDto>>> getByGame(
             @PathVariable Integer gameId) {
 
@@ -89,7 +90,7 @@ public class TournamentController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/games/list")
+    @PostMapping("/public/get_by_games")
     public ResponseEntity<ApiResponse<List<TournamentDto>>> getByGames(
             @RequestBody List<Integer> gameIds) {
 
@@ -103,7 +104,7 @@ public class TournamentController {
     // 🧩 Генерация сетки
     // ==============================
 
-    @PostMapping("/{tournamentId}/bracket/generate")
+    @PostMapping("/organizer/bracket/generate/{tournamentId}")
     public ResponseEntity<ApiResponse<Bracket>> generateBracket(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId,
@@ -117,21 +118,21 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/bracket/final")
+    @PostMapping("/organizer/bracket/final/{tournamentId}")
     public ResponseEntity<ApiResponse<Void>> createFinalBracket(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId,
             @RequestBody Bracket bracket) {
 
         ApiResponse<Void> response =
-                tournamentService.createFinalBracket(tournamentId, organizerId, bracket);
+                tournamentService.submitFinalBracket(tournamentId, organizerId, bracket);
 
         return ResponseEntity
                 .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/bracket/update")
+    @PostMapping("/organizer/bracket/update/{tournamentId}")
     public ResponseEntity<ApiResponse<Void>> updateBracketByMatchResult(
             @PathVariable Long tournamentId,
             @RequestBody MatchResult matchResult) {
@@ -144,11 +145,19 @@ public class TournamentController {
                 .body(response);
     }
 
+    @PostMapping("/private/bracket/match_cancel/{tournamentId}")
+    public ApiResponse<Void> cancelMatchUpdateBracket(
+            @PathVariable Long tournamentId,
+            @RequestParam Long matchId
+    ) {
+        return tournamentService.updateBracketAfterMatchCancel(tournamentId, matchId);
+    }
+
     // ==============================
     // 👥 Регистрация команды
     // ==============================
 
-    @PostMapping("/{tournamentId}/register")
+    @PostMapping("/player/register/{tournamentId}")
     public ResponseEntity<ApiResponse<Void>> registerTeam(
             @RequestHeader("X-User-Id") Long playerId,
             @PathVariable Long tournamentId,
@@ -172,7 +181,7 @@ public class TournamentController {
     // 🔐 Invite link
     // ==============================
 
-    @PostMapping("/{tournamentId}/invite")
+    @PostMapping("/organizer/invite/{tournamentId}")
     public ResponseEntity<ApiResponse<String>> generateInvite(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId) {
@@ -189,7 +198,7 @@ public class TournamentController {
     // 🚪 Выход / кик / апрув
     // ==============================
 
-    @DeleteMapping("/{tournamentId}/teams/{teamId}/leave")
+    @DeleteMapping("/player/leave{tournamentId}/teams/{teamId}")
     public ResponseEntity<ApiResponse<String>> leaveTeam(
             @RequestHeader("X-User-Id") Long playerId,
             @PathVariable Long tournamentId,
@@ -203,7 +212,7 @@ public class TournamentController {
                 .body(response);
     }
 
-    @DeleteMapping("/{tournamentId}/teams/{teamId}/kick")
+    @DeleteMapping("/organizer/kick/{tournamentId}/teams/{teamId}")
     public ResponseEntity<ApiResponse<String>> kickTeam(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId,
@@ -217,7 +226,7 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/teams/{teamId}/handle")
+    @PostMapping("/organizer/handle/{tournamentId}/teams/{teamId}")
     public ResponseEntity<ApiResponse<String>> handleRequest(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId,
@@ -237,7 +246,20 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/start")
+    @PostMapping("/organizer/start_registration/{tournamentId}")
+    public ResponseEntity<ApiResponse<String>> startRegistrationTournament(
+            @RequestHeader("X-User-Id") Long organizerId,
+            @PathVariable Long tournamentId) {
+
+        ApiResponse<String> response =
+                tournamentService.startRegistrationTournament(tournamentId, organizerId);
+
+        return ResponseEntity
+                .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
+                .body(response);
+    }
+
+    @PostMapping("/organizer/start/{tournamentId}")
     public ResponseEntity<ApiResponse<String>> startTournament(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId) {
@@ -250,7 +272,7 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/end")
+    @PostMapping("/organizer/end/{tournamentId}")
     public ResponseEntity<ApiResponse<String>> endTournament(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId) {
@@ -263,7 +285,7 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/{tournamentId}/ban")
+    @PostMapping("/moderator/ban/{tournamentId}")
     public ResponseEntity<ApiResponse<String>> banTournament(
             @PathVariable Long tournamentId) {
 
@@ -275,7 +297,15 @@ public class TournamentController {
                 .body(response);
     }
 
-    @GetMapping("/{tournamentId}/create_match_check")
+    @PostMapping("/organizer/cancel/{id}")
+    public ApiResponse<String> cancelTournament(
+            @RequestHeader("X-User-Id") Long organizerId,
+            @PathVariable Long tournamentId
+    ) {
+        return tournamentService.cancelTournament(tournamentId, organizerId);
+    }
+
+    @GetMapping("/private/create_match_check/{tournamentId}")
     public ResponseEntity<ApiResponse<Void>> checkTournamentCreateMatch(
             @PathVariable Long tournamentId,
             @RequestParam Long organizerId) {

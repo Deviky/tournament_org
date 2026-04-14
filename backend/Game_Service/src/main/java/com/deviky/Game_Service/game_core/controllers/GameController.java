@@ -1,9 +1,6 @@
 package com.deviky.Game_Service.game_core.controllers;
 
-import com.deviky.Game_Service.game_core.dto.ApiResponse;
-import com.deviky.Game_Service.game_core.dto.Player;
-import com.deviky.Game_Service.game_core.dto.Team;
-import com.deviky.Game_Service.game_core.dto.Tournament;
+import com.deviky.Game_Service.game_core.dto.*;
 import com.deviky.Game_Service.game_core.services.GameService;
 import com.deviky.Game_Service.game_core.models.GameEntity;
 import lombok.RequiredArgsConstructor;
@@ -19,24 +16,24 @@ import java.util.List;
 public class GameController {
     private final GameService gameService;
 
-    @GetMapping("/{gameId}")
-    public ResponseEntity<ApiResponse<GameEntity>> getGame(
+    @GetMapping("/public/get/{gameId}")
+    public ResponseEntity<ApiResponse<GameDto>> getGame(
             @PathVariable int gameId
     ) {
-        ApiResponse<GameEntity> response = gameService.getGame(gameId);
+        ApiResponse<GameDto> response = gameService.getGame(gameId);
         HttpStatus status = response.isError() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
         return ResponseEntity.status(status).body(response);
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<ApiResponse<List<GameEntity>>> getGame(
+    @GetMapping("/public/get_all")
+    public ResponseEntity<ApiResponse<List<GameEntity>>> getGames(
     ) {
         ApiResponse<List<GameEntity>> response = gameService.getAllGames();
         HttpStatus status = response.isError() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
         return ResponseEntity.status(status).body(response);
     }
 
-    @PostMapping("/check-player")
+    @PostMapping("/private/check_player")
     public ResponseEntity<ApiResponse<Void>> checkPlayer(
             @RequestBody Player player
     ) {
@@ -45,7 +42,7 @@ public class GameController {
         return ResponseEntity.status(status).body(response);
     }
 
-    @PostMapping("/check-team")
+    @PostMapping("/private/check_team")
     public ResponseEntity<ApiResponse<Void>> checkTeam(
             @RequestBody Team team
     ) {
@@ -54,7 +51,7 @@ public class GameController {
         return ResponseEntity.status(status).body(response);
     }
 
-    @PostMapping("/check-tournament-create")
+    @PostMapping("/private/check_tournament_create")
     public ResponseEntity<ApiResponse<Void>> checkTournamentCreate(
             @RequestBody Tournament tournament
     ) {
@@ -63,7 +60,7 @@ public class GameController {
         return ResponseEntity.status(status).body(response);
     }
 
-    @PostMapping("/check-tournament-start")
+    @PostMapping("/private/check_tournament_start")
     public ResponseEntity<ApiResponse<Void>> checkTournamentStart(
             @RequestBody Tournament tournament
     ) {
@@ -72,7 +69,7 @@ public class GameController {
         return ResponseEntity.status(status).body(response);
     }
 
-    @GetMapping("/get-bracket-algorithms/{gameId}")
+    @GetMapping("/private/get_bracket_algorithms/{gameId}")
     public ResponseEntity<ApiResponse<List<String>>> getBracketAlgorithms(
             @PathVariable Integer gameId
     ) {

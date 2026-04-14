@@ -5,11 +5,14 @@ import com.deviky.Tournament_Service.tournament_core.dto.ApiResponse;
 import com.deviky.Tournament_Service.tournament_core.dto.Game;
 import com.deviky.Tournament_Service.tournament_core.dto.Team;
 import com.deviky.Tournament_Service.tournament_core.dto.TournamentDto;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -18,18 +21,27 @@ import java.util.List;
 public class GameClientService {
     private final WebClient.Builder webClientBuilder;
     private WebClient getWebClient() {
-        return webClientBuilder.baseUrl("http://localhost:8071").build();
+        return webClientBuilder.baseUrl("http://GAME-SERVICE").build();
     }
 
-    public Game getGame(int gameId) {
+    public ApiResponse<Game> getGame(int gameId) {
         try {
             return getWebClient().get()
-                    .uri("/api/game/" + gameId)
+                    .uri("/api/game/public/get/" + gameId)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class)
-                                    .map(msg -> new RuntimeException("Ошибка при получении игры: " + msg)))
-                    .bodyToMono(Game.class)
+                                    .flatMap(msg -> {
+                                        try {
+                                            ObjectMapper mapper = new ObjectMapper();
+                                            ApiResponse<?> apiResponse = mapper.readValue(msg, new TypeReference<ApiResponse<?>>() {});
+                                            return Mono.error(new RuntimeException(apiResponse.getMessage()));
+                                        } catch (Exception e) {
+                                            // если JSON не парсится — оставляем сырое сообщение
+                                            return Mono.error(new RuntimeException(msg));
+                                        }
+                                    }))
+                    .bodyToMono(new ParameterizedTypeReference<ApiResponse<Game>>() {})
                     .block();
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при получении игры: " + e.getMessage());
@@ -39,7 +51,7 @@ public class GameClientService {
     public ApiResponse<Void> checkTournamentCreate(TournamentDto tournament) {
         try {
             return getWebClient().post()
-                    .uri("/api/game/check-tournament-create")
+                    .uri("/api/game/private/check_tournament_create")
                     .bodyValue(tournament)
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<ApiResponse<Void>>() {})
@@ -52,7 +64,7 @@ public class GameClientService {
     public ApiResponse<Void> checkTournamentStart(TournamentDto tournament) {
         try {
             return getWebClient().post()
-                    .uri("/api/game/check-tournament-start")
+                    .uri("/api/game/private/check_tournament_start")
                     .bodyValue(tournament)
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<ApiResponse<Void>>() {})
@@ -66,24 +78,11 @@ public class GameClientService {
         try {
             ApiResponse<List<String>> response = getWebClient()
                     .get()
-                    .uri("/api/game/get-bracket-algorithms/{gameId}", gameId)
+                    .uri("/api/game/private/get_bracket_algorithms/" + gameId)
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<ApiResponse<List<String>>>() {})
                     .block();
             return response;
-        } catch (Exception e) {
-            return new ApiResponse<>("Ошибка сервера: " + e.getMessage(), null, true);
-        }
-    }
-
-    public ApiResponse<Void> checkTeamCorrect(Team team) {
-        try {
-            return getWebClient().post()
-                    .uri("/api/game/check-team")
-                    .bodyValue(team)
-                    .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<ApiResponse<Void>>() {})
-                    .block();
         } catch (Exception e) {
             return new ApiResponse<>("Ошибка сервера: " + e.getMessage(), null, true);
         }

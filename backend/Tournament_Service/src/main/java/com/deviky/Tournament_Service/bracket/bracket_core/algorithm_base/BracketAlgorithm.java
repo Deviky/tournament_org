@@ -11,6 +11,7 @@ public interface BracketAlgorithm {
     Bracket generate(List<Long> teamIds, AlgorithmParams params);
 
     Bracket update(MatchResult matchResult, Bracket bracket);
+    Bracket cancelMatch(Long matchId, Bracket bracket);
 
     String getType();
     String getVersion();

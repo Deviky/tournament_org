@@ -15,13 +15,13 @@ import java.util.List;
 public class ParticipantClientService {
     private final WebClient.Builder webClientBuilder;
     private WebClient getWebClient() {
-        return webClientBuilder.baseUrl("http://localhost:8070").build();
+        return webClientBuilder.baseUrl("http://PARTICIPANT-SERVIE").build();
     }
 
     public ApiResponse<List<Team>> getTeams(List<Long> teamIds) {
         try {
             return getWebClient().post()  // Используем POST вместо GET
-                    .uri("api/participant/teams/get/teams/byIds")
+                    .uri("/api/participant/teams/public/get_by_ids")
                     .bodyValue(teamIds)  // Отправляем список в теле запроса
                     .retrieve()
                     .onStatus(HttpStatusCode::isError,

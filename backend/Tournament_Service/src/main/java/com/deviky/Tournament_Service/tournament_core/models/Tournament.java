@@ -34,10 +34,13 @@ public class Tournament {
     Integer minTeams;
     @Column(name = "max_teams")
     Integer maxTeams;
+    @Column(name = "bracket", columnDefinition = "TEXT")
     String bracket;
     @Nonnull
+    @Enumerated(EnumType.STRING)
     TournamentType type;
     @Nonnull
+    @Enumerated(EnumType.STRING)
     TournamentStatus status;
     @Nonnull
     @Column(name = "start_at")
@@ -47,7 +50,8 @@ public class Tournament {
     @OneToMany(
             mappedBy = "tournament",
             cascade = CascadeType.ALL,
-            orphanRemoval = true
+            orphanRemoval = true,
+            fetch = FetchType.EAGER
     )
     private List<TournamentTeam> teams = new ArrayList<>();
 }

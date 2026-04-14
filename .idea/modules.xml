@@ -2,10 +2,14 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Auth_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Auth_Service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Cybertournament.iml" filepath="$PROJECT_DIR$/.idea/Cybertournament.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Game_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Game_Service.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Integration_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Integration_Service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Notification_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Notification_Service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Participant_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Participant_Service.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Tournament_Service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Tournament_Service.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Tournament_Service.test.iml" filepath="$PROJECT_DIR$/.idea/modules/Tournament_Service.test.iml" />
     </modules>
   </component>
 </project>

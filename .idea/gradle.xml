@@ -4,11 +4,51 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Auth_Service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Auth_Service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Config" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Config" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Discovery" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Discovery" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Game_Service" />
         <option name="gradleJvm" value="21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$/backend/Game_Service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Gateway" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Gateway" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/backend/Integration_Service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/backend/Integration_Service" />
           </set>
         </option>
       </GradleProjectSettings>

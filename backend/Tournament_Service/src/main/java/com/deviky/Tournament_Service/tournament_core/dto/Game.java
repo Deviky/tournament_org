@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Game {
-    int id;
+    Integer id;
     String name;
     String description;
 }

@@ -17,7 +17,7 @@ public class GameParam {
     @Column(name = "param_value")
     String paramValue;
     @Column(name = "apply_rn")
-    int applyRn;
+    Integer applyRn;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
     private GameEntity game;

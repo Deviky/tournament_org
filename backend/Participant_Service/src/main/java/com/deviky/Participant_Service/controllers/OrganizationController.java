@@ -17,7 +17,7 @@ public class OrganizationController {
     private final OrganizationService organizationService;
 
     // ------------------ Создание организации ------------------
-    @PostMapping
+    @PostMapping("/private/create")
     public ResponseEntity<ApiResponse<Organization>> createOrganization(
             @RequestBody CreateOrganizationRequest dto
     ) {
@@ -27,7 +27,7 @@ public class OrganizationController {
     }
 
     // ------------------ Получение организации по ID ------------------
-    @GetMapping("/{organizationId}")
+    @GetMapping("/public/{organizationId}")
     public ResponseEntity<ApiResponse<Organization>> getOrganization(
             @PathVariable Long organizationId
     ) {

@@ -18,21 +18,21 @@ public class TeamController {
 
     private final TeamService teamService;
 
-    @PostMapping
+    @PostMapping("/player/create")
     public ResponseEntity<ApiResponse<TeamDto>> createTeam(@RequestHeader("X-Player-Id") Long selfId,
                                                            @RequestBody CreateTeamRequest request) {
         ApiResponse<TeamDto> response = teamService.createTeam(request, selfId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/{teamId}/join")
+    @PostMapping("/player/join/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> joinTeam(@RequestHeader("X-Player-Id") Long selfId,
                                                          @PathVariable Long teamId) {
         ApiResponse<TeamDto> response = teamService.addPlayerToTeam(teamId, selfId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/{teamId}/request")
+    @PostMapping("/player/request/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> handleRequest(@RequestHeader("X-Player-Id") Long selfId,
                                                               @PathVariable Long teamId,
                                                               @RequestParam Long playerId,
@@ -41,27 +41,27 @@ public class TeamController {
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/{teamId}/invite")
+    @PostMapping("/player/invite_generate/{teamId}")
     public ResponseEntity<String> generateInvite(@PathVariable Long teamId) {
         String link = teamService.generateInviteLink(teamId);
         return ResponseEntity.ok(link);
     }
 
-    @PostMapping("/join-by-token")
+    @PostMapping("/player/join_by_token")
     public ResponseEntity<ApiResponse<TeamDto>> joinByToken(@RequestHeader("X-Player-Id") Long selfId,
                                                             @RequestParam String token) {
         ApiResponse<TeamDto> response = teamService.joinByInviteToken(token, selfId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/{teamId}/leave")
+    @DeleteMapping("/player/leave/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> leaveTeam(@RequestHeader("X-Player-Id") Long selfId,
                                                           @PathVariable Long teamId) {
         ApiResponse<TeamDto> response = teamService.removePlayerFromTeam(teamId, selfId, selfId, false);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @DeleteMapping("/{teamId}/remove")
+    @DeleteMapping("/player/remove/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> removePlayer(@RequestHeader("X-Player-Id") Long selfId,
                                                              @PathVariable Long teamId,
                                                              @RequestParam Long playerId) {
@@ -69,7 +69,7 @@ public class TeamController {
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @PostMapping("/{teamId}/transfer-captain")
+    @PostMapping("/player/transfer_captain/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> transferCaptain(@RequestHeader("X-Player-Id") Long selfId,
                                                                 @PathVariable Long teamId,
                                                                 @RequestParam Long newCaptainId) {
@@ -77,13 +77,13 @@ public class TeamController {
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/{teamId}")
+    @GetMapping("/public/get/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> getTeam(@PathVariable Long teamId) {
         ApiResponse<TeamDto> response = teamService.getTeamWithPlayers(teamId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/get/teams/byIds")
+    @GetMapping("/public/get_by_ids")
     public ResponseEntity<ApiResponse<List<TeamDto>>> getTeamsByIds(@RequestBody List<Long> teamId) {
         ApiResponse<List<TeamDto>> response = teamService.getTeamsWithPlayersByIds(teamId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);

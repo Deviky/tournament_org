@@ -8,13 +8,10 @@ import com.deviky.Tournament_Service.tournament_core.dto.*;
 import com.deviky.Tournament_Service.tournament_core.models.*;
 import com.deviky.Tournament_Service.tournament_core.repositories.TournamentRepository;
 import com.deviky.Tournament_Service.tournament_core.repositories.TournamentTeamRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -26,18 +23,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TournamentService {
 
-    @Autowired
     private final TournamentRepository tournamentRepository;
-    @Autowired
     private final TournamentTeamRepository tournamentTeamsRepository;
-    @Autowired
     private final BracketAlgorithmFactory bracketAlgorithmFactory;
-    @Autowired
     private final GameClientService gameClientService;
-    @Autowired
     private final ParticipantClientService participantClientService;
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
+    private final MatchClientService matchClientService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     public ApiResponse<Map<String, ObjectNode>> getAlgorithms(Integer gameId){
         try{
@@ -104,6 +96,7 @@ public class TournamentService {
 
         List<TournamentTeam> tournamentTeams = tournament.getTeams();
         List<Long> teamIds = tournamentTeams.stream()
+                .filter(team -> team.getStatus() == TournamentTeamStatus.REGISTERED)
                 .map(TournamentTeam::getId)
                 .map(TournamentTeamId::getTeamId)
                 .filter(Objects::nonNull)
@@ -121,10 +114,15 @@ public class TournamentService {
     }
 
     @Transactional
-    public ApiResponse<TournamentDto> createTournament(TournamentCreateDto tournamentCreateDto){
+    public ApiResponse<TournamentDto> createTournament(TournamentCreateDto tournamentCreateDto, Long organizerId){
         try {
+            // Проверка, что дата окончания не раньше даты старта
+            if (tournamentCreateDto.getEndAt() != null && tournamentCreateDto.getEndAt().isBefore(tournamentCreateDto.getStartAt())) {
+                return new ApiResponse<>("Дата окончания турнира не может быть раньше даты старта", null, true);
+            }
+
             TournamentDto tournamentDto = TournamentDto.builder()
-                    .organizerId(tournamentCreateDto.getOrganizerId())
+                    .organizerId(organizerId)
                     .gameId(tournamentCreateDto.getGameId())
                     .name(tournamentCreateDto.getName())
                     .description(tournamentCreateDto.getDescription())
@@ -142,7 +140,7 @@ public class TournamentService {
                 return new ApiResponse<>(checkResult.getMessage(), null, true);
             else{
                 Tournament tournament = Tournament.builder()
-                        .organizerId(tournamentCreateDto.getOrganizerId())
+                        .organizerId(organizerId)
                         .gameId(tournamentCreateDto.getGameId())
                         .name(tournamentCreateDto.getName())
                         .description(tournamentCreateDto.getDescription())
@@ -153,13 +151,11 @@ public class TournamentService {
                         .startAt(tournamentCreateDto.getStartAt())
                         .endAt(tournamentCreateDto.getEndAt())
                         .build();
-                Long id = tournamentRepository.save(tournament).getId();
-                tournamentDto.setId(id);
-
+                Tournament tournamentSaved = tournamentRepository.save(tournament);
+                tournamentDto.setId(tournamentSaved.getId());
                 return new ApiResponse<>("Турнир успешно создан", tournamentDto, false);
             }
-        }
-        catch (Exception e){
+        } catch (Exception e){
             return new ApiResponse<>("Ошибка при создании турнира: " + e.getMessage(), null, true);
         }
     }
@@ -216,24 +212,93 @@ public class TournamentService {
     }
 
 
-    public ApiResponse<Void> createFinalBracket(Long tournamentId, Long organizerId, Bracket bracket){
+    @Transactional
+    public ApiResponse<Void> submitFinalBracket(Long tournamentId, Long organizerId, Bracket bracket) {
         try {
+
             Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
 
-            if (tournament == null) {
+            if (tournament == null)
                 return new ApiResponse<>("Такого турнира не существует", null, true);
-            }
 
-            if (!Objects.equals(tournament.getOrganizerId(), organizerId)) {
+            if (!Objects.equals(tournament.getOrganizerId(), organizerId))
                 return new ApiResponse<>("Только организатор может выполнять это действие", null, true);
+
+            if (tournament.getStatus() != TournamentStatus.REGISTRATION_CLOSED)
+                return new ApiResponse<>("Невозможно создать турнирную сетку", null, true);
+
+            if (tournament.getBracket() != null)
+                return new ApiResponse<>("Сетка уже создана", null, true);
+
+
+            Map<Long, CreateMatchDto> matchesToCreate = new HashMap<>();
+
+            for (BracketGroup group : bracket.getBracketGroups()) {
+
+                for (BracketMatch match : group.getMatches()) {
+
+                    CreateMatchDto dto = new CreateMatchDto();
+                    dto.setTournamentId(tournamentId);
+
+                    List<Long> teamIds = match.getSlots()
+                            .stream()
+                            .map(BracketSlot::getTeamId)
+                            .filter(Objects::nonNull)
+                            .toList();
+
+                    dto.setTeamIds(teamIds);
+
+                    matchesToCreate.put(match.getMatchId(), dto);
+                }
             }
 
-            if (!(tournament.getStatus().equals(TournamentStatus.REGISTRATION_CLOSED)))
-                return new ApiResponse<>("Невозможно создать турнирную сетку с текущим статусом турнира", null, true);
 
-            //TODO: create matches by bracket
+            ApiResponse<Map<Long, Match>> matchesResponse =
+                    matchClientService.createMatchesByBracket(matchesToCreate);
+
+            if (matchesResponse.isError())
+                return new ApiResponse<>(matchesResponse.getMessage(), null, true);
+
+
+            Map<Long, Long> idMapping = matchesResponse.getData()
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            e -> e.getValue().getId()
+                    ));
+
+
+            for (BracketGroup group : bracket.getBracketGroups()) {
+
+                for (BracketMatch match : group.getMatches()) {
+
+                    Long tempId = match.getMatchId();
+
+                    if (idMapping.containsKey(tempId)) {
+                        match.setMatchId(idMapping.get(tempId));
+                    }
+                }
+            }
+
+
+            for (BracketGroup group : bracket.getBracketGroups()) {
+
+                for (BracketMatch match : group.getMatches()) {
+
+                    for (BracketSlot slot : match.getSlots()) {
+
+                        Long refMatchId = slot.getRefMatchId();
+
+                        if (refMatchId != null && idMapping.containsKey(refMatchId)) {
+                            slot.setRefMatchId(idMapping.get(refMatchId));
+                        }
+                    }
+                }
+            }
 
             tournament.setBracket(bracket.toJsonStr());
+            tournament.setStatus(TournamentStatus.BRACKET_CREATED);
 
             tournamentRepository.save(tournament);
 
@@ -268,8 +333,109 @@ public class TournamentService {
         }
     }
 
-    public ApiResponse<String> getTournament(){
-        return new ApiResponse();
+    @Transactional
+    public ApiResponse<Void> updateBracketAfterMatchCancel(Long tournamentId, Long matchId) {
+
+        try {
+
+            Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+            if (tournament == null) {
+                return new ApiResponse<>("Турнир не найден", null, true);
+            }
+
+            Bracket bracket = new Bracket(tournament.getBracket());
+
+            BracketAlgorithm algorithm =
+                    bracketAlgorithmFactory.getAlgorithm(bracket.getAlgorithmType());
+
+            Bracket newBracket = algorithm.cancelMatch(matchId, bracket);
+
+            tournament.setBracket(newBracket.toJsonStr());
+            tournamentRepository.save(tournament);
+
+            return new ApiResponse<>("Сетка обновлена после отмены матча", null, false);
+
+        }
+        catch (Exception e) {
+            return new ApiResponse<>("Ошибка обновления сетки: " + e.getMessage(), null, true);
+        }
+    }
+
+    public ApiResponse<TournamentDto> getTournament(Long tournamentId) {
+
+        try {
+
+            Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+            if (tournament == null) {
+                return new ApiResponse<>("Такого турнира не существует", null, true);
+            }
+
+            List<Long> teamIds = tournament.getTeams()
+                    .stream()
+                    .map(tt -> tt.getId().getTeamId())
+                    .toList();
+
+            ApiResponse<List<Team>> teamsResponse =
+                    participantClientService.getTeams(teamIds);
+
+            if (teamsResponse.isError())
+                return new ApiResponse<>(teamsResponse.getMessage(), null, true);
+
+
+            ApiResponse<List<Match>> matchesResponse =
+                    matchClientService.getMatchesByTournament(tournamentId);
+
+            if (matchesResponse.isError())
+                return new ApiResponse<>(matchesResponse.getMessage(), null, true);
+
+
+            ApiResponse<Organization> organizationResponse =
+                    participantClientService.getOrganization(tournament.getOrganizerId());
+
+            if (organizationResponse.isError())
+                return new ApiResponse<>(organizationResponse.getMessage(), null, true);
+
+            ApiResponse<Game> gameResponse =
+                    gameClientService.getGame(tournament.getGameId());
+
+            if (gameResponse.isError())
+                return new ApiResponse<>(gameResponse.getMessage(), null, true);
+
+
+            Bracket bracket = null;
+
+            if (tournament.getBracket() != null) {
+                bracket = new Bracket(tournament.getBracket());
+            }
+
+
+            TournamentDto dto = TournamentDto.builder()
+                    .id(tournament.getId())
+                    .organizerId(tournament.getOrganizerId())
+                    .gameId(tournament.getGameId())
+                    .game(gameResponse.getData())
+                    .name(tournament.getName())
+                    .description(tournament.getDescription())
+                    .minTeams(tournament.getMinTeams())
+                    .maxTeams(tournament.getMaxTeams())
+                    .type(tournament.getType())
+                    .status(tournament.getStatus())
+                    .startAt(tournament.getStartAt())
+                    .endAt(tournament.getEndAt())
+                    .bracket(bracket)
+                    .organization(organizationResponse.getData())
+                    .teams(teamsResponse.getData())
+                    .matches(matchesResponse.getData())
+                    .build();
+
+            return new ApiResponse<>("", dto, false);
+
+        }
+        catch (Exception e) {
+            return new ApiResponse<>("Ошибка при получении турнира: " + e.getMessage(), null, true);
+        }
     }
 
     public ApiResponse<List<TournamentDto>> getTournaments(){
@@ -499,8 +665,8 @@ public class TournamentService {
             }
 
             // 🚫 Нельзя выйти после старта турнира
-            if (tournament.getStatus() == TournamentStatus.RUNNING) {
-                return new ApiResponse<>("Нельзя выйти из турнира после его начала", null, true);
+            if (tournament.getStatus() != TournamentStatus.REGISTRATION) {
+                return new ApiResponse<>("Нельзя выйти из турнира не во время регистрации", null, true);
             }
 
             // 🔥 Получаем команду через participant-service
@@ -631,6 +797,34 @@ public class TournamentService {
     }
 
     @Transactional
+    public ApiResponse<String> startRegistrationTournament(Long tournamentId, Long organizerId) {
+
+        Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+        if (tournament == null)
+            return new ApiResponse<>("Турнир не найден", null, true);
+
+        if (!Objects.equals(tournament.getOrganizerId(), organizerId)) {
+            return new ApiResponse<>("Только организатор может выполнять это действие", null, true);
+        }
+
+        if (tournament.getStatus() != TournamentStatus.CREATED)
+            return new ApiResponse<>("Турнир нельзя запустить в текущем статусе", null, true);
+
+
+        TournamentDto tournamentDto = TournamentDto.builder()
+                .id(tournament.getId())
+                .organizerId(tournament.getOrganizerId())
+                .gameId(tournament.getGameId())
+                .build();
+
+        tournament.setStatus(TournamentStatus.REGISTRATION);
+        tournamentRepository.save(tournament);
+
+        return new ApiResponse<>("Началась регистрация на турнир", null, false);
+    }
+
+    @Transactional
     public ApiResponse<String> startTournament(Long tournamentId, Long organizerId) {
 
         Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
@@ -642,7 +836,7 @@ public class TournamentService {
             return new ApiResponse<>("Только организатор может выполнять это действие", null, true);
         }
 
-        if (tournament.getStatus() != TournamentStatus.REGISTRATION_CLOSED)
+        if (tournament.getStatus() != TournamentStatus.BRACKET_CREATED)
             return new ApiResponse<>("Турнир нельзя запустить в текущем статусе", null, true);
 
         List<Team> teams = new ArrayList<>();
@@ -708,7 +902,44 @@ public class TournamentService {
         tournament.setStatus(TournamentStatus.BANNED);
         tournamentRepository.save(tournament);
 
+        ApiResponse<Void> cancelResponse = matchClientService.cancelMatchesByTournament(tournamentId);
+        if (cancelResponse.isError()) {
+            // Логируем ошибку или кидаем исключение
+            throw new RuntimeException("Не удалось отменить матчи турнира: " + cancelResponse.getMessage());
+        }
         return new ApiResponse<>("Турнир заблокирован", null, false);
+    }
+
+    @Transactional
+    public ApiResponse<String> cancelTournament(Long tournamentId, Long organizerId) {
+
+        try {
+
+            Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+            if (tournament == null)
+                return new ApiResponse<>("Турнир не найден", null, true);
+
+            if (!Objects.equals(tournament.getOrganizerId(), organizerId))
+                return new ApiResponse<>("Только организатор может отменить турнир", null, true);
+
+            if (tournament.getStatus() == TournamentStatus.FINISHED)
+                return new ApiResponse<>("Нельзя отменить завершённый турнир", null, true);
+
+            tournament.setStatus(TournamentStatus.CANCEL);
+
+            tournamentRepository.save(tournament);
+
+            ApiResponse<Void> cancelResponse = matchClientService.cancelMatchesByTournament(tournamentId);
+            if (cancelResponse.isError()) {
+                // Логируем ошибку или кидаем исключение
+                throw new RuntimeException("Не удалось отменить матчи турнира: " + cancelResponse.getMessage());
+            }
+            return new ApiResponse<>("Турнир отменён", null, false);
+
+        } catch (Exception e) {
+            return new ApiResponse<>("Ошибка отмены турнира: " + e.getMessage(), null, true);
+        }
     }
 
     public ApiResponse<Void> checkTournamentMatchCreate(Long tournamentId, Long organizerId){
@@ -725,5 +956,4 @@ public class TournamentService {
 
         return new ApiResponse<>("", null, false);
     }
-
 }

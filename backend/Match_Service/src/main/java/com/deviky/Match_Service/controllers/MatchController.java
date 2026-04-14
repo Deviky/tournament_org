@@ -17,24 +17,8 @@ public class MatchController {
 
     private final MatchService matchService;
 
-    // ==============================
-    // 🎮 Создание матчей
-    // ==============================
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<MatchDto>> createMatch(
-            @RequestHeader("X-User-Id") Long organizerId,
-            @RequestBody CreateMatchDto createMatchDto) {
-
-        ApiResponse<MatchDto> response =
-                matchService.createMatch(createMatchDto, organizerId);
-
-        return ResponseEntity
-                .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
-                .body(response);
-    }
-
-    @PostMapping("/create_by_batch")
+    @PostMapping("/private/create_by_batch")
     public ResponseEntity<ApiResponse<Map<Long, MatchDto>>> createMatchesByBracket(
             @RequestBody Map<Long, CreateMatchDto> mapMatchesDto) {
 
@@ -50,7 +34,7 @@ public class MatchController {
     // 📋 Получение матчей
     // ==============================
 
-    @GetMapping("/{matchId}")
+    @GetMapping("/public/get/{matchId}")
     public ResponseEntity<ApiResponse<MatchDto>> getMatch(
             @PathVariable Long matchId) {
 
@@ -62,7 +46,7 @@ public class MatchController {
                 .body(response);
     }
 
-    @GetMapping("/get_by_tournament/{tournamentId}")
+    @GetMapping("/public/get_by_tournament/{tournamentId}")
     public ResponseEntity<ApiResponse<List<MatchDto>>> getMatchesByTournament(
             @PathVariable Long tournamentId) {
 
@@ -78,7 +62,7 @@ public class MatchController {
     // 🔄 Обновление матча
     // ==============================
 
-    @PutMapping
+    @PutMapping("/organizer/update")
     public ResponseEntity<ApiResponse<Void>> updateMatch(
             @RequestHeader("X-User-Id") Long organizerId,
             @RequestBody UpdateMatchDto updateMatchDto) {
@@ -95,7 +79,7 @@ public class MatchController {
     // ⚡ Управление статусом матча
     // ==============================
 
-    @PostMapping("/{matchId}/start")
+    @PostMapping("/organizer/start/{matchId}")
     public ResponseEntity<ApiResponse<Void>> startMatch(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long matchId) {
@@ -108,20 +92,20 @@ public class MatchController {
                 .body(response);
     }
 
-    @PostMapping("/{matchId}/finish")
+    @PostMapping("/organizer/finish")
     public ResponseEntity<ApiResponse<Void>> finishMatch(
             @RequestHeader("X-User-Id") Long organizerId,
-            @PathVariable Long matchId) {
+            @RequestBody MatchResultDto matchResultDto) {
 
         ApiResponse<Void> response =
-                matchService.finishMatch(matchId, organizerId);
+                matchService.finishMatch(matchResultDto, organizerId);
 
         return ResponseEntity
                 .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
                 .body(response);
     }
 
-    @PostMapping("/{matchId}/cancel")
+    @PostMapping("/organizer/cancel/{matchId}")
     public ResponseEntity<ApiResponse<Void>> cancelMatch(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long matchId) {
@@ -138,13 +122,12 @@ public class MatchController {
     // 🏆 Управление матчами турнира
     // ==============================
 
-    @PostMapping("/by_tournament/{tournamentId}/cancel")
+    @PostMapping("/private/by_tournament/cancel/{tournamentId}")
     public ResponseEntity<ApiResponse<Void>> cancelTournamentMatches(
-            @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId) {
 
         ApiResponse<Void> response =
-                matchService.cancelTournamentMatches(tournamentId, organizerId);
+                matchService.cancelTournamentMatches(tournamentId);
 
         return ResponseEntity
                 .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)

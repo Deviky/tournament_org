@@ -11,7 +11,7 @@ import java.util.Map;
 @GameType(name = "Counter-Strike 2")
 public class CS2Game extends Game {
     @GameParamField(param_name = "max_players_team")
-    private int maxPlayersTeam;
+    private Integer maxPlayersTeam;
 
     @GameParamField(param_name = "player_game_platform_needed")
     private Map<String, String> playerGamePlatformNeeded;
@@ -19,8 +19,11 @@ public class CS2Game extends Game {
     @GameParamField(param_name = "player_statistic_platform_supported")
     private String playerStatisticPlatformSupported;
 
+    @GameParamField(param_name = "match_statistic_platform_supported")
+    private String matchStatisticPlatformSupported;
+
     @GameParamField(param_name = "min_teams_tournament")
-    private int minTeamsTournament;
+    private Integer minTeamsTournament;
 
     public CS2Game(List<GameParam> gameParams) {
         super(gameParams);
@@ -34,18 +37,15 @@ public class CS2Game extends Game {
 
         Map<String, String> links = playerGameInfo.getLinks();
 
-        // Проверяем обязательные платформы
         for (Map.Entry<String, String> entry : playerGamePlatformNeeded.entrySet()) {
             String platform = entry.getKey();
-            String expectedDomain = entry.getValue(); // ожидаемый url/domain из параметра
+            String expectedDomain = entry.getValue();
 
-            // Получаем ссылку игрока для этой платформы
             String playerLink = links.get(platform);
             if (playerLink == null || playerLink.isBlank()) {
                 return new CheckResult(true, "Отсутствует привязка к платформе " + platform);
             }
 
-            // Проверяем, содержит ли ссылка игрока ожидаемый домен
             if (!playerLink.contains(expectedDomain)) {
                 return new CheckResult(true, "Домен игрока не совпадает с доменом платформы " + expectedDomain);
             }
@@ -56,7 +56,7 @@ public class CS2Game extends Game {
 
     @Override
     public CheckResult isTeamCorrect(Team team) {
-        if (team.getPlayers().size() > maxPlayersTeam)
+        if (team.getPlayers().size() <= maxPlayersTeam)
             return new CheckResult(false, "");
         else
             return new CheckResult(true, "Кол-во игроков в команде превышает " + maxPlayersTeam);

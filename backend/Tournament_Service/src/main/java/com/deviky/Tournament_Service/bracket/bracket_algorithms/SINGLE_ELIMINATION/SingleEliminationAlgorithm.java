@@ -107,6 +107,26 @@ public class SingleEliminationAlgorithm implements BracketAlgorithm {
     }
 
     @Override
+    public Bracket cancelMatch(Long matchId, Bracket bracket) {
+
+        for (BracketGroup group : bracket.getBracketGroups()) {
+
+            for (BracketMatch match : group.getMatches()) {
+
+                for (BracketSlot slot : match.getSlots()) {
+
+                    if (slot.getRefMatchId() != null &&
+                            slot.getRefMatchId().equals(matchId)) {
+
+                        slot.setTeamId(null);
+                    }
+                }
+            }
+        }
+        return bracket;
+    }
+
+    @Override
     public String getType() {
         return "SINGLE_ELIMINATION";
     }

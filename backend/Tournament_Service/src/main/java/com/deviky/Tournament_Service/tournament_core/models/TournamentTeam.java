@@ -25,6 +25,6 @@ public class TournamentTeam {
     private Tournament tournament;
     @Column(name = "registered_at")
     private LocalDateTime registeredAt;
-
+    @Enumerated(EnumType.STRING)
     private TournamentTeamStatus status;
 }

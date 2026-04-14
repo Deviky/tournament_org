@@ -13,9 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 public class CreateMatchDto {
     Long tournamentId;
-    @Column(name = "start_at")
     LocalDateTime startAt;
-    @Column(name = "end_at")
     String links;
     LocalDateTime endAt;
     List<Long> teamIds;

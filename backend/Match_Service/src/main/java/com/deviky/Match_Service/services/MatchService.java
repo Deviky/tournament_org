@@ -5,9 +5,11 @@ import com.deviky.Match_Service.dto.*;
 import com.deviky.Match_Service.models.*;
 import com.deviky.Match_Service.repositories.MatchRepository;
 import com.deviky.Match_Service.repositories.MatchTeamRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -19,36 +21,6 @@ public class MatchService {
     private final MatchTeamRepository matchTeamRepository;
     private final ParticipantClientService participantClientService;
     private final TournamentClientService tournamentClientService;
-
-
-    public ApiResponse<MatchDto> createMatch(CreateMatchDto createMatchDto, Long organizerId){
-        ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(createMatchDto.getTournamentId(), organizerId);
-
-        if (tournamentResponse.isError())
-            return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
-
-        ApiResponse<MatchDto> matchDtoResponse = createMatchImpl(createMatchDto);
-        if (matchDtoResponse.isError())
-            return matchDtoResponse;
-
-        MatchDto matchDto = matchDtoResponse.getData();
-
-        ApiResponse<List<Team>> teamsResponse =  participantClientService.getTeams(createMatchDto.getTeamIds());
-
-        if (teamsResponse.isError()) {
-            matchDtoResponse.setMessage("Не удалось получить сведения о команде");
-            matchDtoResponse.setError(true);
-            return matchDtoResponse;
-        }
-
-        List<Team> teams = teamsResponse.getData();
-
-        matchDto.setTeams(teams);
-
-        matchDtoResponse.setData(matchDto);
-
-        return matchDtoResponse;
-    }
 
     private ApiResponse<MatchDto> createMatchImpl(CreateMatchDto createMatchDto) {
         try {
@@ -259,9 +231,11 @@ public class MatchService {
         }
     }
 
-    public ApiResponse<Void> finishMatch(Long matchId, Long organizerId){
+
+    @Transactional
+    public ApiResponse<Void> finishMatch(MatchResultDto matchResult, Long organizerId){
         try {
-            Match match = matchRepository.findById(matchId).orElseThrow(() -> new Exception("Матч не найден"));
+            Match match = matchRepository.findById(matchResult.getMatchId()).orElseThrow(() -> new Exception("Матч не найден"));
 
             ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
 
@@ -271,14 +245,37 @@ public class MatchService {
             if (!match.getStatus().equals(MatchStatus.RUNNING))
                 return new ApiResponse<>("Невозможно завершить матч с текущим статусом", null, true);
 
+            List<MatchTeam> matchTeams = match.getMatchTeams();
+
+            boolean allTeamsHaveResult = matchTeams.stream()
+                    .allMatch(team -> matchResult.getTeamToMatchResult()
+                            .containsKey(team.getId().getTeamId()));
+
+            if (!allTeamsHaveResult) {
+                return new ApiResponse<>("Не для всех команд указан результат", null, true);
+            }
+
+            matchTeams.forEach(matchTeam ->
+                    matchTeam.setResult(
+                            matchResult.getTeamToMatchResult().get(matchTeam.getId().getTeamId())
+                    )
+            );
+
+            matchTeamRepository.saveAll(matchTeams);
             match.setStatus(MatchStatus.FINISHED);
+            match.setEndAt(LocalDateTime.now());
             matchRepository.save(match);
+
+            tournamentClientService.updateBracket(organizerId, matchResult);
+
             return new ApiResponse<>("Матч обновлён", null, false);
         }
         catch (Exception e){
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
+
+    @Transactional
     public ApiResponse<Void> cancelMatch(Long matchId, Long organizerId){
         try {
             Match match = matchRepository.findById(matchId).orElseThrow(() -> new Exception("Матч не найден"));
@@ -295,6 +292,14 @@ public class MatchService {
                 return new ApiResponse<>("Матч уже отменён", null, true);
 
             match.setStatus(MatchStatus.CANCELED);
+            // 🛠 Обновляем сетку турнира и кидаем исключение при ошибке
+            ApiResponse<Void> updateBracketResponse =
+                    tournamentClientService.cancelMatchUpdateBracket(match.getTournamentId(), matchId);
+
+            if (updateBracketResponse.isError()) {
+                // Бросаем unchecked exception, чтобы @Transactional откатил match.setStatus
+                throw new RuntimeException("Не удалось обновить сетку турнира: " + updateBracketResponse.getMessage());
+            }
             matchRepository.save(match);
             return new ApiResponse<>("Матч обновлён", null, false);
         }
@@ -303,13 +308,8 @@ public class MatchService {
         }
     }
 
-    public ApiResponse<Void> cancelTournamentMatches(Long tournamentId, Long organizerId){
+    public ApiResponse<Void> cancelTournamentMatches(Long tournamentId){
         try {
-            ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(tournamentId, organizerId);
-
-            if (tournamentResponse.isError())
-                return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
-
             List<Match> matches = matchRepository.findByTournamentId(tournamentId);
             List<Match> readyMatches = new ArrayList<>();
 

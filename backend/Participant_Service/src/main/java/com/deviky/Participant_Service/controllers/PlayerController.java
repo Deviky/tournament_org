@@ -19,7 +19,7 @@ public class PlayerController {
     private final TeamService teamService;
 
     // ------------------ Создание игрока ------------------
-    @PostMapping
+    @PostMapping("/private/create")
     public ResponseEntity<ApiResponse<PlayerDto>> createPlayer(
             @RequestBody CreatePlayerRequest dto
     ) {
@@ -29,10 +29,9 @@ public class PlayerController {
     }
 
     // ------------------ Получение игрока с командами ------------------
-    @GetMapping("/{playerId}")
+    @GetMapping("/public/{playerId}")
     public ResponseEntity<ApiResponse<PlayerDto>> getPlayer(
-            @PathVariable Long playerId,
-            @RequestHeader("X-Self-Player-Id") Long selfPlayerId
+            @PathVariable Long playerId
     ) {
         ApiResponse<PlayerDto> response = playerService.getPlayerWithTeams(playerId);
         HttpStatus status = response.isError() ? HttpStatus.NOT_FOUND : HttpStatus.OK;
@@ -40,7 +39,7 @@ public class PlayerController {
     }
 
     // ------------------ Поиск игроков ------------------
-    @GetMapping("/search")
+    @GetMapping("/public/search")
     public ResponseEntity<ApiResponse<SearchDto>> searchPlayers(
             @RequestParam String query
     ) {

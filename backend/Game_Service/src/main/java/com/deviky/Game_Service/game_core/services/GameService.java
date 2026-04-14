@@ -32,7 +32,7 @@ public class GameService {
         String gameName = gameEntity.getName();
 
         // Пакет, где хранятся классы игр
-        String basePackage = "com.deviky.Game_Service.models";
+        String basePackage = "com.deviky.Game_Service.games";
 
         // Используем Reflections для поиска всех классов с аннотацией @GameType
         Reflections reflections = new Reflections(basePackage);
@@ -100,7 +100,7 @@ public class GameService {
         }
     }
 
-    public ApiResponse<List<String>> getAlgorithmsSupported(int gameId){
+    public ApiResponse<List<String>> getAlgorithmsSupported(Integer gameId){
         try {
             Game game = createGame(gameId);
             List<String> result = game.getBracketAlgorithmsSupported();
@@ -110,11 +110,16 @@ public class GameService {
         }
     }
 
-    public ApiResponse<GameEntity> getGame(int gameId){
+    public ApiResponse<GameDto> getGame(Integer gameId){
         try {
             GameEntity game = gameRepository.findById(gameId)
                     .orElseThrow(() -> new Exception("Игра не найдена"));
-            return new ApiResponse<>("Игра найдена", game, false);
+            GameDto gameDto = GameDto.builder()
+                    .id(game.getId())
+                    .name(game.getName())
+                    .description(game.getDescription())
+                    .build();
+            return new ApiResponse<>("Игра найдена", gameDto, false);
         } catch (Exception ex) {
             return new ApiResponse<>(ex.getMessage(), null, true);
         }
