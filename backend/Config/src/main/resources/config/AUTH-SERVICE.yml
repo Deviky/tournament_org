@@ -1,0 +1,15 @@
+server:
+  port: 8077
+
+spring:
+  mail:
+    host: smtp.ethereal.email
+    port: 587
+    username: tyshawn.upton83@ethereal.email
+    password: BCUUYvQeDNuKwWBBBt
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  jpa:
+    hibernate:
+      ddl-auto: update

@@ -1,0 +1,29 @@
+eureka:
+  client:
+    service-url:
+      defaultZone: ${APP_EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka}
+
+logging:
+  level:
+    org:
+      springframework:
+        web: DEBUG
+    root: INFO
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/Tournament_org
+    username: postgres
+    password: 915327
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  redis:
+    host: localhost
+    port: 6379
+    password: 915327
+    database: 0

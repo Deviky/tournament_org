@@ -1,5 +1,6 @@
 package com.deviky.Auth_Service.controllers;
 
+import com.deviky.Auth_Service.components.PublicAppUrlProvider;
 import com.deviky.Auth_Service.dto.*;
 import com.deviky.Auth_Service.services.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,17 +16,18 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PublicAppUrlProvider publicAppUrlProvider;
 
     @PostMapping("/register/player")
     public ResponseEntity<ApiResponse<String>> registerPlayer(@RequestBody RegisterPlayerRequest request, HttpServletRequest http) {
-        String appUrl = http.getScheme() + "://" + http.getServerName() + ":5173";
+        String appUrl = publicAppUrlProvider.resolve(http);
         ApiResponse<String> response = authService.register(request, appUrl);
         return ResponseEntity.status(response.isError() ? 400 : 200).body(response);
     }
 
     @PostMapping("/register/organization")
     public ResponseEntity<ApiResponse<String>> registerOrganization(@RequestBody RegisterOrganizationRequest request, HttpServletRequest http) {
-        String appUrl = http.getScheme() + "://" + http.getServerName() + ":5173";
+        String appUrl = publicAppUrlProvider.resolve(http);
         ApiResponse<String> response = authService.register(request, appUrl);
         return ResponseEntity.status(response.isError() ? 400 : 200).body(response);
     }
@@ -41,7 +43,7 @@ public class AuthController {
             HttpServletRequest http
     ) {
         try {
-            String appUrl = http.getScheme() + "://" + http.getServerName() + ":" + http.getServerPort();
+            String appUrl = publicAppUrlProvider.resolve(http);
             ApiResponse<String> response = authService.resendConfirmationEmail(email, appUrl);
             return ResponseEntity.status(response.isError() ? 400 : 200).body(response);
         } catch (Exception e) {
@@ -83,7 +85,7 @@ public class AuthController {
             @RequestParam String email,
             HttpServletRequest http
     ) {
-        String appUrl = http.getScheme() + "://" + http.getServerName() + ":" + http.getServerPort();
+        String appUrl = publicAppUrlProvider.resolve(http);
         ApiResponse<String> response = authService.sendPasswordResetEmail(email, appUrl);
         return ResponseEntity.status(response.isError() ? 400 : 200).body(response);
     }
@@ -99,8 +101,12 @@ public class AuthController {
 
     @PostMapping("/create_moderator")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<AuthResponse>> createModerator(@RequestBody ModeratorCreateRequest request) {
-        ApiResponse<AuthResponse> response = authService.createModerator(request);
+    public ResponseEntity<ApiResponse<String>> createModerator(
+            @RequestBody ModeratorCreateRequest request,
+            HttpServletRequest http
+    ) {
+        String appUrl = publicAppUrlProvider.resolve(http);
+        ApiResponse<String> response = authService.createModerator(request, appUrl);
         return ResponseEntity.status(response.isError() ? 400 : 200).body(response);
     }
 }

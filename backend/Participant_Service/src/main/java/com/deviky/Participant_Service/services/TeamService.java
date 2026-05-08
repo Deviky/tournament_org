@@ -10,7 +10,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -71,7 +70,19 @@ public class TeamService {
             Team team = teamRepository.findById(teamId)
                     .orElseThrow(() -> new Exception("Команда не найдена"));
 
-            Optional<TeamPlayer> existing = teamPlayerRepository.findByPlayerIdAndTeam_GameId(player.getId(), team.getGameId());
+            if (team.getStatus() != TeamStatus.ACTIVE) {
+                return new ApiResponse<>("В эту команду сейчас нельзя вступить", null, true);
+            }
+
+            Optional<TeamPlayer> existing = teamPlayerRepository.findByPlayerIdAndTeam_GameIdAndStatusIn(
+                    player.getId(),
+                    team.getGameId(),
+                    List.of(
+                            TeamPlayerStatus.ACTIVE,
+                            TeamPlayerStatus.REQUESTED,
+                            TeamPlayerStatus.INVITED
+                    )
+            );
             if (existing.isPresent()) {
                 return new ApiResponse<>("Игрок уже состоит в другой команде этой игры", null, true);
             }
@@ -137,7 +148,40 @@ public class TeamService {
     }
 
     // ------------------ Генерация пригласительной ссылки ------------------
-    public String generateInviteLink(Long teamId) {
+    public ApiResponse<List<TeamPlayerSummaryDto>> getPendingRequests(Long teamId, Long selfPlayerId) {
+        try {
+            TeamPlayer captain = teamPlayerRepository.findById(new TeamPlayerId(selfPlayerId, teamId))
+                    .orElseThrow(() -> new Exception("Вы не состоите в команде"));
+
+            if (!captain.isCaptain()) {
+                return new ApiResponse<>("Вы не капитан команды", null, true);
+            }
+
+            List<TeamPlayerSummaryDto> pendingPlayers = teamPlayerRepository.findByTeamIdAndStatusIn(
+                            teamId,
+                            List.of(TeamPlayerStatus.REQUESTED, TeamPlayerStatus.INVITED)
+                    ).stream()
+                    .map(tp -> new TeamPlayerSummaryDto(
+                            tp.getPlayer().getId(),
+                            tp.getPlayer().getNickname(),
+                            tp.isCaptain(),
+                            tp.getStatus()
+                    ))
+                    .toList();
+
+            return new ApiResponse<>("Заявки найдены", pendingPlayers, false);
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при получении заявок: " + ex.getMessage(), null, true);
+        }
+    }
+
+    public String generateInviteLink(Long teamId, Long selfPlayerId) throws Exception {
+        TeamPlayer captain = requireActiveCaptain(teamId, selfPlayerId);
+
+        if (captain.getTeam().getStatus() != TeamStatus.ACTIVE) {
+            throw new Exception("Ссылку приглашения можно создать только для активной команды");
+        }
+
         byte[] bytes = new byte[16];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -148,13 +192,72 @@ public class TeamService {
     }
 
     // ------------------ Присоединение по токену ------------------
+    @Transactional
     public ApiResponse<TeamDto> joinByInviteToken(String token, Long selfPlayerId) {
         try {
-            Long teamId = (Long) redisTemplate.opsForValue().get("invite:" + token);
+            Object rawTeamId = redisTemplate.opsForValue().get("invite:" + token);
+            Long teamId = null;
+
+            if (rawTeamId instanceof Number number) {
+                teamId = number.longValue();
+            } else if (rawTeamId instanceof String value && !value.isBlank()) {
+                teamId = Long.parseLong(value);
+            }
+
             if (teamId == null) throw new Exception("Недействительная ссылка");
 
-            return addPlayerToTeam(teamId, selfPlayerId); // автоматически ACTIVE
+            Player player = playerRepository.findById(selfPlayerId)
+                    .orElseThrow(() -> new Exception("Игрок не найден"));
+
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new Exception("Команда не найдена"));
+
+            if (team.getStatus() != TeamStatus.ACTIVE) {
+                return new ApiResponse<>("Эта команда сейчас не принимает новых игроков", null, true);
+            }
+
+            Optional<TeamPlayer> existing = teamPlayerRepository.findByPlayerIdAndTeam_GameIdAndStatusIn(
+                    player.getId(),
+                    team.getGameId(),
+                    List.of(
+                            TeamPlayerStatus.ACTIVE,
+                            TeamPlayerStatus.REQUESTED,
+                            TeamPlayerStatus.INVITED
+                    )
+            );
+
+            if (existing.isPresent()) {
+                TeamPlayer existingMembership = existing.get();
+
+                if (!existingMembership.getTeam().getId().equals(teamId)) {
+                    return new ApiResponse<>("Игрок уже состоит в другой команде этой игры", null, true);
+                }
+
+                if (existingMembership.getStatus() == TeamPlayerStatus.ACTIVE) {
+                    return new ApiResponse<>("Игрок уже состоит в этой команде", getTeamWithPlayers(teamId).getData(), false);
+                }
+
+                existingMembership.setStatus(TeamPlayerStatus.ACTIVE);
+                teamPlayerRepository.save(existingMembership);
+            } else {
+                TeamPlayer tp = new TeamPlayer();
+                tp.setId(new TeamPlayerId(player.getId(), team.getId()));
+                tp.setPlayer(player);
+                tp.setTeam(team);
+                tp.setCaptain(false);
+                tp.setStatus(TeamPlayerStatus.ACTIVE);
+                teamPlayerRepository.save(tp);
+            }
+
+            ApiResponse<Void> checkTeamCorrectResponse = gameClientService.checkTeamCorrect(getTeamWithPlayers(teamId).getData());
+            if (checkTeamCorrectResponse.isError()) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return new ApiResponse<>(checkTeamCorrectResponse.getMessage(), null, true);
+            }
+
+            return new ApiResponse<>("Игрок присоединился по приглашению", getTeamWithPlayers(teamId).getData(), false);
         } catch (Exception ex) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return new ApiResponse<>("Ошибка при присоединении по ссылке: " + ex.getMessage(), null, true);
         }
     }
@@ -175,8 +278,9 @@ public class TeamService {
 
             if (tp.isCaptain()) {
                 // капитан сам выходит
-                List<TeamPlayer> others = teamPlayerRepository.findByTeamId(teamId);
-                others.remove(tp);
+                List<TeamPlayer> others = getActiveTeamMembers(teamId).stream()
+                        .filter(member -> !Objects.equals(member.getPlayer().getId(), playerId))
+                        .toList();
                 if (others.isEmpty()) {
                     // никто не остался — удаляем команду
                     Team team = teamRepository.findById(teamId).orElseThrow();
@@ -228,6 +332,24 @@ public class TeamService {
     }
 
     // ------------------ Получение команды с ACTIVE игроками ------------------
+    public ApiResponse<TeamDto> updateTeamStatus(Long teamId, TeamStatus status, Long selfPlayerId) {
+        try {
+            TeamPlayer captain = requireActiveCaptain(teamId, selfPlayerId);
+            Team team = captain.getTeam();
+
+            if (status == TeamStatus.ACTIVE && getActiveTeamMembers(teamId).isEmpty()) {
+                return new ApiResponse<>("Нельзя активировать пустую команду", null, true);
+            }
+
+            team.setStatus(status);
+            teamRepository.save(team);
+
+            return new ApiResponse<>("Статус команды обновлён", getTeamWithPlayers(teamId).getData(), false);
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при обновлении статуса команды: " + ex.getMessage(), null, true);
+        }
+    }
+
     public ApiResponse<TeamDto> getTeamWithPlayers(Long teamId) {
         try {
             Team team = teamRepository.findById(teamId)
@@ -278,6 +400,39 @@ public class TeamService {
         }
     }
 
+    public ApiResponse<List<TeamDto>> getAllTeamsWithPlayers() {
+        try {
+            List<Team> teams = teamRepository.findAll().stream()
+                    .filter(team -> team.getStatus() == TeamStatus.ACTIVE)
+                    .toList();
+
+            if (teams.isEmpty()) {
+                return new ApiResponse<>("Команды не найдены", Collections.emptyList(), false);
+            }
+
+            List<Long> teamIds = teams.stream()
+                    .map(Team::getId)
+                    .toList();
+
+            List<TeamPlayer> allTeamPlayers = teamPlayerRepository.findByTeamIdIn(teamIds);
+
+            Map<Long, List<TeamPlayer>> playersByTeamId = allTeamPlayers.stream()
+                    .filter(tp -> tp.getStatus() == TeamPlayerStatus.ACTIVE)
+                    .collect(Collectors.groupingBy(tp -> tp.getTeam().getId()));
+
+            List<TeamDto> teamDtos = teams.stream()
+                    .map(team -> {
+                        List<TeamPlayer> activeMembers = playersByTeamId.getOrDefault(team.getId(), Collections.emptyList());
+                        return mapToTeamDto(team, activeMembers);
+                    })
+                    .toList();
+
+            return new ApiResponse<>("Команды найдены", teamDtos, false);
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при получении команд: " + ex.getMessage(), null, true);
+        }
+    }
+
     public ApiResponse<List<TeamDto>> searchTeams(String query) {
         try {
             String key = "search:teams:" + query.toLowerCase();
@@ -312,6 +467,26 @@ public class TeamService {
         }
     }
 
+    private TeamPlayer requireActiveCaptain(Long teamId, Long selfPlayerId) throws Exception {
+        TeamPlayer membership = teamPlayerRepository.findById(new TeamPlayerId(selfPlayerId, teamId))
+                .orElseThrow(() -> new Exception("Вы не состоите в этой команде"));
+
+        if (membership.getStatus() != TeamPlayerStatus.ACTIVE) {
+            throw new Exception("Управлять командой может только действующий участник");
+        }
+
+        if (!membership.isCaptain()) {
+            throw new Exception("Управлять статусом команды может только капитан");
+        }
+
+        return membership;
+    }
+
+    private List<TeamPlayer> getActiveTeamMembers(Long teamId) {
+        return teamPlayerRepository.findByTeamId(teamId).stream()
+                .filter(member -> member.getStatus() == TeamPlayerStatus.ACTIVE)
+                .toList();
+    }
 
     private TeamDto mapToTeamDto(Team team, List<TeamPlayer> members) {
         List<TeamPlayerSummaryDto> playerDtos = members.stream()

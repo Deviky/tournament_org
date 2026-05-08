@@ -1,0 +1,177 @@
+.bracket-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* =========================
+   GROUP
+========================= */
+.bracket-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bracket-group-title {
+  font-size: 14px;
+  color: #8b949e;
+  padding-left: 6px;
+}
+
+/* =========================
+   GRAPH
+========================= */
+.bracket-graph-container {
+  overflow-x: auto;
+  padding: 30px 10px;
+}
+
+.bracket-graph {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  width: max-content;
+  min-height: 100%;
+}
+
+.bracket-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bracket-lines path {
+  fill: none;
+  stroke: rgba(88, 166, 255, 0.55);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.16));
+}
+
+/* =========================
+   COLUMN
+========================= */
+.bracket-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 50px;
+  min-width: 260px;
+}
+
+/* =========================
+   MATCH NODE
+========================= */
+.match-node {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 12px;
+  width: 220px;
+  position: relative;
+  z-index: 1;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.22);
+}
+
+.match-node:hover {
+  border-color: #58a6ff;
+  transform: translateY(-3px);
+}
+
+/* =========================
+   HEADER
+========================= */
+.match-header {
+  font-size: 12px;
+  color: #8b949e;
+  margin-bottom: 8px;
+}
+
+/* =========================
+   SLOT BASE
+========================= */
+.match-row {
+  padding: 7px 10px;
+  margin-top: 6px;
+
+  border-radius: 6px;
+  font-size: 13px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: #161b22;
+  color: #c9d1d9;
+
+  transition: 0.2s;
+}
+
+/* =========================
+   STATUS COLORS
+========================= */
+.match-row.winner {
+  color: #2ea043;
+  font-weight: 600;
+}
+
+.match-row.loser {
+  color: #f85149;
+}
+
+.match-row.draw {
+  color: #d29922;
+}
+
+/* =========================
+   HIGHLIGHT PATH
+========================= */
+.match-row.highlight-match {
+  border: 1px solid #58a6ff;
+  background: rgba(88, 166, 255, 0.18);
+  color: #58a6ff;
+}
+
+/* =========================
+   CLICK STATES
+========================= */
+.match-row {
+  cursor: default;
+}
+
+.match-row:not(.highlight-match):hover {
+  background: #1f2a37;
+}
+
+.match-row[id] {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .bracket-graph-container {
+    padding: 18px 6px 24px;
+  }
+
+  .bracket-graph {
+    gap: 48px;
+  }
+
+  .bracket-column {
+    min-width: 232px;
+    gap: 36px;
+  }
+
+  .match-node {
+    width: 208px;
+  }
+}

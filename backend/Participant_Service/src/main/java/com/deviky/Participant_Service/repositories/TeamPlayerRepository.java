@@ -15,7 +15,13 @@ public interface TeamPlayerRepository extends JpaRepository<TeamPlayer, TeamPlay
 
     List<TeamPlayer> findByPlayerId(Long playerId);
 
-    Optional<TeamPlayer> findByPlayerIdAndTeam_GameId(Long playerId, Integer gameId);
+    Optional<TeamPlayer> findByPlayerIdAndTeam_GameIdAndStatusIn(
+            Long playerId,
+            Integer gameId,
+            List<TeamPlayerStatus> statuses
+    );
+
+    List<TeamPlayer> findByTeamIdAndStatusIn(Long teamId, List<TeamPlayerStatus> statuses);
 
     void deleteByPlayerId(Long playerId);
 

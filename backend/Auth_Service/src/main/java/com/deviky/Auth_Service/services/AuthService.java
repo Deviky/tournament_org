@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.mail.MailSender;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.parameters.P;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -96,7 +98,7 @@ public class AuthService {
         String token = UUID.randomUUID().toString();
         emailConfirmationTokenStore.storeToken(token, email);
 
-        String link = appUrl + "/auth/confirm?token=" + token;
+        String link = appUrl + "/confirm?token=" + token;
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setTo(email);
         mail.setSubject("Confirm your email");
@@ -130,7 +132,7 @@ public class AuthService {
 
             emailConfirmationTokenStore.removeToken(token);
 
-            String access = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+            String access = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
             String refresh = jwtService.generateRefreshToken(user.getUsername());
 
             return new ApiResponse<>("Email confirmed successfully", new AuthResponse(access, refresh), false);
@@ -150,12 +152,16 @@ public class AuthService {
             if (!user.isEmailConfirmed())
                 return new ApiResponse<>("Вы не можете ", null, true);
 
-            String access = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+            String access = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
             String refresh = jwtService.generateRefreshToken(user.getUsername());
 
             return new ApiResponse<>("Login successful", new AuthResponse(access, refresh), false);
+        } catch (DisabledException e) {
+            return new ApiResponse<>("Email не подтвержден", null, true);
+        } catch (BadCredentialsException e) {
+            return new ApiResponse<>("Неверный email или пароль", null, true);
         } catch (Exception e) {
-            return new ApiResponse<>(e.getMessage(), null, true);
+            return new ApiResponse<>("Ошибка авторизации", null, true);
         }
     }
 
@@ -175,7 +181,7 @@ public class AuthService {
             if (!user.isEmailConfirmed())
                 return new ApiResponse<>("Email not confirmed", null, true);
 
-            String newAccess = jwtService.generateAccessToken(user.getUsername(), user.getRole());
+            String newAccess = jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
 
             return new ApiResponse<>(
                     "Token refreshed",
@@ -193,12 +199,16 @@ public class AuthService {
 
             if (accessToken != null) {
                 long accessTTL = jwtService.getExpirySeconds(accessToken);
-                blacklist.revoke(accessToken, accessTTL);
+                if (accessTTL > 0) {
+                    blacklist.revoke(accessToken, accessTTL);
+                }
             }
 
             if (refreshToken != null) {
                 long refreshTTL = jwtService.getExpirySeconds(refreshToken);
-                blacklist.revoke(refreshToken, refreshTTL);
+                if (refreshTTL > 0) {
+                    blacklist.revoke(refreshToken, refreshTTL);
+                }
             }
 
             return new ApiResponse<>("Logged out successfully", null, false);
@@ -216,7 +226,7 @@ public class AuthService {
             String token = UUID.randomUUID().toString();
             passwordResetTokenStore.storeToken(token, email);
 
-            String link = appUrl + "/auth/reset_password?token=" + token;
+            String link = appUrl + "/reset?token=" + token;
             SimpleMailMessage mail = new SimpleMailMessage();
             mail.setTo(email);
             mail.setSubject("Password reset");
@@ -247,8 +257,12 @@ public class AuthService {
         }
     }
 
-    public ApiResponse<AuthResponse> createModerator(ModeratorCreateRequest request) {
+    public ApiResponse<String> createModerator(ModeratorCreateRequest request, String appUrl) {
         try {
+            if (userRepository.findByUsername(request.getEmail()).isPresent()) {
+                return new ApiResponse<>("Пользователь с данным email уже существует", null, true);
+            }
+
             User user = User.builder()
                     .username(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
@@ -257,11 +271,9 @@ public class AuthService {
                     .build();
 
             userRepository.save(user);
+            sendConfirmationEmail(user.getUsername(), appUrl);
 
-            String access = jwtService.generateAccessToken(user.getUsername(), user.getRole());
-            String refresh = jwtService.generateRefreshToken(user.getUsername());
-
-            return new ApiResponse<>("Moderator created successfully", new AuthResponse(access, refresh), false);
+            return new ApiResponse<>("Moderator created successfully. Confirmation email sent.", null, false);
         } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }

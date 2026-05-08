@@ -1,3 +1,13 @@
 spring:
   application:
     name: Config
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config
+
+server:
+  port: 8888

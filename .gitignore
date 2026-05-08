@@ -1,0 +1,44 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.user
+*.swp
+*.swo
+
+# Environment and local overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Frontend artifacts
+**/node_modules/
+**/dist/
+**/dist-ssr/
+coverage/
+
+# Java and Gradle artifacts
+**/.gradle/
+**/build/
+**/out/
+**/bin/
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# Generated test/debug output
+**/test-output/

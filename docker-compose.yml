@@ -1,0 +1,187 @@
+services:
+  config:
+    build:
+      context: ./backend/Config
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-config
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      SERVER_PORT: 8888
+
+  discovery:
+    build:
+      context: ./backend/Discovery
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-discovery
+    restart: unless-stopped
+    depends_on:
+      - config
+    ports:
+      - "8761:8761"
+    environment:
+      SERVER_PORT: 8761
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+
+  gateway:
+    build:
+      context: ./backend/Gateway
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-gateway
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8777:8777"
+    environment:
+      SERVER_PORT: 8777
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: gateway
+
+  auth-service:
+    build:
+      context: ./backend/Auth_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-auth-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8077:8077"
+    environment:
+      SERVER_PORT: 8077
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: auth-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 915327
+      SPRING_REDIS_HOST: host.docker.internal
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: 915327
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:5173}
+      APP_BOOTSTRAP_ADMIN_EMAIL: ${APP_BOOTSTRAP_ADMIN_EMAIL:-}
+      APP_BOOTSTRAP_ADMIN_PASSWORD: ${APP_BOOTSTRAP_ADMIN_PASSWORD:-}
+
+  participant-service:
+    build:
+      context: ./backend/Participant_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-participant-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8072:8072"
+    environment:
+      SERVER_PORT: 8072
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: participant-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 915327
+      SPRING_REDIS_HOST: host.docker.internal
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: 915327
+
+  tournament-service:
+    build:
+      context: ./backend/Tournament_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-tournament-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8071:8071"
+    environment:
+      SERVER_PORT: 8071
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: tournament-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 915327
+      SPRING_REDIS_HOST: host.docker.internal
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: 915327
+
+  match-service:
+    build:
+      context: ./backend/Match_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-match-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8073:8073"
+    environment:
+      SERVER_PORT: 8073
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: match-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 915327
+
+  game-service:
+    build:
+      context: ./backend/Game_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-game-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8069:8069"
+    environment:
+      SERVER_PORT: 8069
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: game-service
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 915327
+
+  integration-service:
+    build:
+      context: ./backend/Integration_Service
+      dockerfile: ../docker/java-service.Dockerfile
+    container_name: cybertournament-integration-service
+    restart: unless-stopped
+    depends_on:
+      - config
+      - discovery
+    ports:
+      - "8125:8125"
+    environment:
+      SERVER_PORT: 8125
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CONFIG_IMPORT: configserver:http://config:8888
+      APP_EUREKA_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://discovery:8761/eureka
+      EUREKA_INSTANCE_HOSTNAME: integration-service

@@ -13,10 +13,18 @@ import lombok.NoArgsConstructor;
 @Builder
 @Table(schema = "match", name = "match_teams")
 public class MatchTeam {
-    @Id
+    @EmbeddedId
     MatchTeamId id;
+
+    @Column(name = "status", nullable = false)
+    String status;
+
+    @Convert(converter = MatchTeamResultConverter.class)
+    @Column(name = "result")
     MatchTeamResult result;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_id", insertable = false, updatable = false)
+    @MapsId("matchId")
+    @JoinColumn(name = "match_id")
     private Match match;
 }

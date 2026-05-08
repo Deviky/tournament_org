@@ -1,8 +1,17 @@
 package com.deviky.Match_Service.services;
 
-
-import com.deviky.Match_Service.dto.*;
-import com.deviky.Match_Service.models.*;
+import com.deviky.Match_Service.dto.ApiResponse;
+import com.deviky.Match_Service.dto.CreateMatchDto;
+import com.deviky.Match_Service.dto.MatchDto;
+import com.deviky.Match_Service.dto.MatchResultDto;
+import com.deviky.Match_Service.dto.MatchTeamDto;
+import com.deviky.Match_Service.dto.Team;
+import com.deviky.Match_Service.dto.UpdateMatchDto;
+import com.deviky.Match_Service.models.Match;
+import com.deviky.Match_Service.models.MatchStatus;
+import com.deviky.Match_Service.models.MatchTeam;
+import com.deviky.Match_Service.models.MatchTeamId;
+import com.deviky.Match_Service.models.MatchTeamResult;
 import com.deviky.Match_Service.repositories.MatchRepository;
 import com.deviky.Match_Service.repositories.MatchTeamRepository;
 import jakarta.transaction.Transactional;
@@ -10,7 +19,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,127 +38,115 @@ public class MatchService {
     private final TournamentClientService tournamentClientService;
 
     private ApiResponse<MatchDto> createMatchImpl(CreateMatchDto createMatchDto) {
-        try {
-            // Валидация входных данных
-            if (createMatchDto.getTeamIds() == null || createMatchDto.getTeamIds().size() < 2) {
-                return new ApiResponse<>("Для матча необходимо минимум 2 участника", null, true);
-            }
+        List<Long> teamIds = createMatchDto.getTeamIds() != null
+                ? createMatchDto.getTeamIds()
+                : new ArrayList<>();
 
-            // Проверяем на дубликаты команд
-            Set<Long> uniqueTeamIds = new HashSet<>(createMatchDto.getTeamIds());
-            if (uniqueTeamIds.size() != createMatchDto.getTeamIds().size()) {
-                return new ApiResponse<>("Участники не должны дублироваться в матче", null, true);
-            }
+        if (teamIds.size() > 2) {
+            return new ApiResponse<>("В матче нельзя указать более 2 участников", null, true);
+        }
 
-            // Создание матча
-            Match match = Match.builder()
-                    .tournamentId(createMatchDto.getTournamentId())
-                    .links(createMatchDto.getLinks())
-                    .status(MatchStatus.COMING)
-                    .startAt(createMatchDto.getStartAt())
-                    .endAt(createMatchDto.getEndAt())
+        Set<Long> uniqueTeamIds = new HashSet<>(teamIds);
+        if (uniqueTeamIds.size() != teamIds.size()) {
+            return new ApiResponse<>("Участники не должны дублироваться в матче", null, true);
+        }
+
+        Match match = Match.builder()
+                .tournamentId(createMatchDto.getTournamentId())
+                .links(createMatchDto.getLinks())
+                .status(MatchStatus.COMING)
+                .startAt(createMatchDto.getStartAt())
+                .endAt(createMatchDto.getEndAt())
+                .build();
+
+        Match savedMatch = matchRepository.save(match);
+
+        List<MatchTeam> matchTeams = new ArrayList<>();
+        for (Long teamId : teamIds) {
+            MatchTeamId matchTeamId = MatchTeamId.builder()
+                    .matchId(savedMatch.getId())
+                    .teamId(teamId)
                     .build();
 
-            // Сохраняем матч
-            Match savedMatch = matchRepository.save(match);
+            MatchTeam matchTeam = MatchTeam.builder()
+                    .id(matchTeamId)
+                    .match(savedMatch)
+                    .status("ACTIVE")
+                    .result(MatchTeamResult.NOT_PLAYED)
+                    .build();
 
-            // Создаем связи с командами
-            List<MatchTeam> matchTeams = new ArrayList<>();
-            for (Long teamId : createMatchDto.getTeamIds()) {
-                MatchTeamId matchTeamId = MatchTeamId.builder()
-                        .matchId(savedMatch.getId())
-                        .teamId(teamId)
-                        .build();
+            matchTeams.add(matchTeam);
+        }
 
-                MatchTeam matchTeam = MatchTeam.builder()
-                        .id(matchTeamId)
-                        .match(savedMatch)
-                        .result(MatchTeamResult.NOT_PLAYED)
-                        .build();
-
-                matchTeams.add(matchTeam);
-            }
-
-            // Сохраняем все связи
+        if (!matchTeams.isEmpty()) {
             matchTeamRepository.saveAll(matchTeams);
-
-            // Формируем ответ
-            MatchDto matchDto = MatchDto.builder()
-                    .id(savedMatch.getId())
-                    .tournamentId(savedMatch.getTournamentId())
-                    .status(savedMatch.getStatus())
-                    .links(savedMatch.getLinks())
-                    .startAt(savedMatch.getStartAt())
-                    .endAt(savedMatch.getEndAt())
-                    .build();
-
-            return new ApiResponse<>("Матч успешно создан", matchDto, false);
         }
-        catch (Exception e) {
-            return new ApiResponse<>(e.getMessage(), null, true);
-        }
+
+        MatchDto matchDto = MatchDto.builder()
+                .id(savedMatch.getId())
+                .tournamentId(savedMatch.getTournamentId())
+                .status(savedMatch.getStatus())
+                .links(savedMatch.getLinks())
+                .startAt(savedMatch.getStartAt())
+                .endAt(savedMatch.getEndAt())
+                .teams(new ArrayList<>())
+                .build();
+
+        return new ApiResponse<>("Матч успешно создан", matchDto, false);
     }
 
-    public ApiResponse<Map<Long, MatchDto>> createMatchesByBracket(Map<Long, CreateMatchDto> mapMatchesDto){
+    @Transactional
+    public ApiResponse<Map<Long, MatchDto>> createMatchesByBracket(Map<Long, CreateMatchDto> mapMatchesDto) {
         try {
-
             Map<Long, MatchDto> createdMatches = new HashMap<>();
 
-            for (Long preMatchId : mapMatchesDto.keySet()) {
-                CreateMatchDto createMatchDto = mapMatchesDto.get(preMatchId);
-                ApiResponse<MatchDto> matchDto = createMatchImpl(createMatchDto);
-                if (matchDto.isError())
+            for (Map.Entry<Long, CreateMatchDto> entry : mapMatchesDto.entrySet()) {
+                ApiResponse<MatchDto> matchDto = createMatchImpl(entry.getValue());
+                if (matchDto.isError()) {
                     return new ApiResponse<>(matchDto.getMessage(), null, true);
+                }
 
-                createdMatches.put(preMatchId, matchDto.getData());
+                createdMatches.put(entry.getKey(), matchDto.getData());
             }
 
             return new ApiResponse<>("", createdMatches, false);
-        }
-        catch (Exception e) {
-            return new ApiResponse<>( e.getMessage(), null, true);
-        }
-    }
-
-    public ApiResponse<Void> updateMatch(UpdateMatchDto updateMatchDto, Long organizerId){
-        try {
-            Match match = matchRepository.findById(updateMatchDto.getMatchId()).orElseThrow(() -> new Exception("Матч не найден"));
-
-            ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
-
-            if (tournamentResponse.isError())
-                return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
-
-            if (!match.getStatus().equals(MatchStatus.COMING))
-                return new ApiResponse<>("Невохможно обновить матч с текущим статусом", null, true);
-
-            match.setLinks(updateMatchDto.getLinks());
-            match.setStartAt(updateMatchDto.getStartAt());
-            match.setEndAt(updateMatchDto.getEndAt());
-            matchRepository.save(match);
-            return new ApiResponse<>("Матч обновлён", null, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
 
-    public ApiResponse<MatchDto> getMatch(Long matchId){
+    public ApiResponse<Void> updateMatch(UpdateMatchDto updateMatchDto, Long organizerId) {
         try {
-            Match match = matchRepository.findById(matchId).orElseThrow(() -> new Exception("Матч не найден"));
+            Match match = matchRepository.findById(updateMatchDto.getMatchId())
+                    .orElseThrow(() -> new Exception("Матч не найден"));
 
-            List<Long> teamsIds = match.getMatchTeams().stream()
-                    .map(matchTeam -> matchTeam.getId().getTeamId())  // Предполагая, что teamId есть в MatchTeamId
-                    .toList();
+            ApiResponse<Void> tournamentResponse =
+                    tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
 
-            ApiResponse<List<Team>> teamsResponse =  participantClientService.getTeams(teamsIds);
-
-            if (teamsResponse.isError()) {
-                return new ApiResponse<>("Не удалось получить сведения о командах в матче", null, true );
+            if (tournamentResponse.isError()) {
+                return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
             }
 
-            List<Team> teams = teamsResponse.getData();
+            if (match.getStatus() != MatchStatus.COMING) {
+                return new ApiResponse<>("Невозможно обновить матч с текущим статусом", null, true);
+            }
 
+            match.setLinks(updateMatchDto.getLinks());
+            match.setStartAt(updateMatchDto.getStartAt());
+            matchRepository.save(match);
+
+            return new ApiResponse<>("Матч обновлён", null, false);
+        } catch (Exception e) {
+            return new ApiResponse<>(e.getMessage(), null, true);
+        }
+    }
+
+    public ApiResponse<MatchDto> getMatch(Long matchId) {
+        try {
+            Match match = matchRepository.findById(matchId)
+                    .orElseThrow(() -> new Exception("Матч не найден"));
+
+            List<MatchTeamDto> teams = resolveMatchTeams(match.getMatchTeams());
 
             MatchDto matchDto = MatchDto.builder()
                     .id(match.getId())
@@ -156,8 +159,7 @@ public class MatchService {
                     .build();
 
             return new ApiResponse<>("", matchDto, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
@@ -170,95 +172,96 @@ public class MatchService {
                 return new ApiResponse<>("Матчи для данного турнира не найдены", new ArrayList<>(), false);
             }
 
-            // Собираем все ID команд
             Set<Long> allTeamIds = matches.stream()
                     .flatMap(match -> match.getMatchTeams().stream())
-                    .map(matchTeam -> matchTeam.getId().getTeamId())
+                    .map(mt -> mt.getId().getTeamId())
+                    .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-            // Получаем информацию о командах
-            ApiResponse<List<Team>> teamsResponse = participantClientService.getTeams(new ArrayList<>(allTeamIds));
+            Map<Long, Team> teamMap = loadTeamsMap(new ArrayList<>(allTeamIds));
 
-            Map<Long, Team> teamsMap = teamsResponse.isError() ? new HashMap<>() :
-                    teamsResponse.getData().stream()
-                            .collect(Collectors.toMap(Team::getId, team -> team));
-
-            // Преобразуем в DTO
             List<MatchDto> matchDtos = matches.stream()
-                    .map(match -> {
-                        List<Team> matchTeams = match.getMatchTeams().stream()
-                                .map(matchTeam -> teamsMap.get(matchTeam.getId().getTeamId()))
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.toList());
-
-                        return MatchDto.builder()
-                                .id(match.getId())
-                                .tournamentId(match.getTournamentId())
-                                .status(match.getStatus())
-                                .links(match.getLinks())
-                                .startAt(match.getStartAt())
-                                .endAt(match.getEndAt())
-                                .teams(matchTeams)
-                                .build();
-                    })
-                    .collect(Collectors.toList());
+                    .map(match -> MatchDto.builder()
+                            .id(match.getId())
+                            .tournamentId(match.getTournamentId())
+                            .status(match.getStatus())
+                            .links(match.getLinks())
+                            .startAt(match.getStartAt())
+                            .endAt(match.getEndAt())
+                            .teams(toMatchTeamDtos(match.getMatchTeams(), teamMap))
+                            .build())
+                    .toList();
 
             return new ApiResponse<>("Матчи успешно получены", matchDtos, false);
-
         } catch (Exception e) {
             return new ApiResponse<>("Ошибка при получении матчей: " + e.getMessage(), null, true);
         }
     }
 
-    public ApiResponse<Void> startMatch(Long matchId, Long organizerId){
+    public ApiResponse<Void> startMatch(Long matchId, Long organizerId) {
         try {
-            Match match = matchRepository.findById(matchId).orElseThrow(() -> new Exception("Матч не найден"));
+            Match match = matchRepository.findById(matchId)
+                    .orElseThrow(() -> new Exception("Матч не найден"));
 
-            ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
+            ApiResponse<Void> tournamentResponse =
+                    tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
 
-            if (tournamentResponse.isError())
+            if (tournamentResponse.isError()) {
                 return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
+            }
 
-            if (!match.getStatus().equals(MatchStatus.COMING))
+            if (match.getStatus() != MatchStatus.COMING) {
                 return new ApiResponse<>("Невозможно начать матч с текущим статусом", null, true);
+            }
+
+            if (match.getStartAt() == null) {
+                match.setStartAt(LocalDateTime.now());
+            }
 
             match.setStatus(MatchStatus.RUNNING);
             matchRepository.save(match);
+
             return new ApiResponse<>("Матч обновлён", null, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
 
-
     @Transactional
-    public ApiResponse<Void> finishMatch(MatchResultDto matchResult, Long organizerId){
+    public ApiResponse<Void> finishMatch(MatchResultDto matchResult, Long organizerId) {
         try {
-            Match match = matchRepository.findById(matchResult.getMatchId()).orElseThrow(() -> new Exception("Матч не найден"));
+            Match match = matchRepository.findById(matchResult.getMatchId())
+                    .orElseThrow(() -> new Exception("Матч не найден"));
 
-            ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
+            ApiResponse<Void> tournamentResponse =
+                    tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
 
-            if (tournamentResponse.isError())
+            if (tournamentResponse.isError()) {
                 return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
+            }
 
-            if (!match.getStatus().equals(MatchStatus.RUNNING))
+            if (match.getStatus() != MatchStatus.RUNNING) {
                 return new ApiResponse<>("Невозможно завершить матч с текущим статусом", null, true);
+            }
 
             List<MatchTeam> matchTeams = match.getMatchTeams();
-
             boolean allTeamsHaveResult = matchTeams.stream()
-                    .allMatch(team -> matchResult.getTeamToMatchResult()
-                            .containsKey(team.getId().getTeamId()));
+                    .allMatch(team -> matchResult.getTeamToMatchResult().containsKey(team.getId().getTeamId()));
 
             if (!allTeamsHaveResult) {
                 return new ApiResponse<>("Не для всех команд указан результат", null, true);
             }
 
+            long winnersCount = matchResult.getTeamToMatchResult().values().stream()
+                    .filter(result -> result == MatchTeamResult.WINNER)
+                    .count();
+
+            if (winnersCount != 1) {
+                return new ApiResponse<>("В матче должен быть ровно один победитель", null, true);
+            }
+
             matchTeams.forEach(matchTeam ->
-                    matchTeam.setResult(
-                            matchResult.getTeamToMatchResult().get(matchTeam.getId().getTeamId())
-                    )
+                    matchTeam.setResult(matchResult.getTeamToMatchResult().get(matchTeam.getId().getTeamId()))
             );
 
             matchTeamRepository.saveAll(matchTeams);
@@ -266,65 +269,130 @@ public class MatchService {
             match.setEndAt(LocalDateTime.now());
             matchRepository.save(match);
 
-            tournamentClientService.updateBracket(organizerId, matchResult);
+            ApiResponse<Void> updateBracketResponse =
+                    tournamentClientService.updateBracket(match.getTournamentId(), matchResult);
+
+            if (updateBracketResponse == null || updateBracketResponse.isError()) {
+                throw new RuntimeException(
+                        updateBracketResponse != null
+                                ? updateBracketResponse.getMessage()
+                                : "Не удалось обновить сетку турнира"
+                );
+            }
 
             return new ApiResponse<>("Матч обновлён", null, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
 
     @Transactional
-    public ApiResponse<Void> cancelMatch(Long matchId, Long organizerId){
+    public ApiResponse<Void> cancelMatch(Long matchId, Long organizerId) {
         try {
-            Match match = matchRepository.findById(matchId).orElseThrow(() -> new Exception("Матч не найден"));
+            Match match = matchRepository.findById(matchId)
+                    .orElseThrow(() -> new Exception("Матч не найден"));
 
-            ApiResponse<Void> tournamentResponse = tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
+            ApiResponse<Void> tournamentResponse =
+                    tournamentClientService.checkTournamentInfo(match.getTournamentId(), organizerId);
 
-            if (tournamentResponse.isError())
+            if (tournamentResponse.isError()) {
                 return new ApiResponse<>(tournamentResponse.getMessage(), null, true);
+            }
 
-            if (match.getStatus().equals(MatchStatus.FINISHED))
-                return new ApiResponse<>("Матч нельзя отменить поскольку он уже завершён", null, true);
+            if (match.getStatus() == MatchStatus.FINISHED) {
+                return new ApiResponse<>("Матч нельзя отменить, поскольку он уже завершён", null, true);
+            }
 
-            else if (match.getStatus().equals(MatchStatus.CANCELED))
+            if (match.getStatus() == MatchStatus.CANCELED) {
                 return new ApiResponse<>("Матч уже отменён", null, true);
+            }
 
             match.setStatus(MatchStatus.CANCELED);
-            // 🛠 Обновляем сетку турнира и кидаем исключение при ошибке
+
             ApiResponse<Void> updateBracketResponse =
                     tournamentClientService.cancelMatchUpdateBracket(match.getTournamentId(), matchId);
 
             if (updateBracketResponse.isError()) {
-                // Бросаем unchecked exception, чтобы @Transactional откатил match.setStatus
                 throw new RuntimeException("Не удалось обновить сетку турнира: " + updateBracketResponse.getMessage());
             }
+
             matchRepository.save(match);
             return new ApiResponse<>("Матч обновлён", null, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
     }
 
-    public ApiResponse<Void> cancelTournamentMatches(Long tournamentId){
+    public ApiResponse<Void> cancelTournamentMatches(Long tournamentId) {
         try {
             List<Match> matches = matchRepository.findByTournamentId(tournamentId);
             List<Match> readyMatches = new ArrayList<>();
 
             for (Match match : matches) {
-                if (match.getStatus().equals(MatchStatus.FINISHED) || match.getStatus().equals(MatchStatus.CANCELED))
+                if (match.getStatus() == MatchStatus.FINISHED || match.getStatus() == MatchStatus.CANCELED) {
                     continue;
+                }
 
                 match.setStatus(MatchStatus.CANCELED);
                 readyMatches.add(match);
             }
+
             matchRepository.saveAll(readyMatches);
             return new ApiResponse<>("Матчи обновлены", null, false);
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             return new ApiResponse<>(e.getMessage(), null, true);
         }
+    }
+
+    private List<MatchTeamDto> resolveMatchTeams(List<MatchTeam> matchTeams) {
+        List<Long> teamIds = matchTeams.stream()
+                .map(mt -> mt.getId().getTeamId())
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (teamIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<Long, Team> teamMap = loadTeamsMap(teamIds);
+        return toMatchTeamDtos(matchTeams, teamMap);
+    }
+
+    private Map<Long, Team> loadTeamsMap(List<Long> teamIds) {
+        if (teamIds == null || teamIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        ApiResponse<List<Team>> teamsResponse = participantClientService.getTeams(teamIds);
+        if (teamsResponse.isError()) {
+            throw new RuntimeException("Не удалось получить команды: " + teamsResponse.getMessage());
+        }
+
+        List<Team> teams = teamsResponse.getData() != null ? teamsResponse.getData() : new ArrayList<>();
+        return teams.stream().collect(Collectors.toMap(Team::getId, team -> team, (left, right) -> left));
+    }
+
+    private List<MatchTeamDto> toMatchTeamDtos(List<MatchTeam> matchTeams, Map<Long, Team> teamMap) {
+        return matchTeams.stream()
+                .map(matchTeam -> {
+                    Long teamId = matchTeam.getId().getTeamId();
+                    Team team = teamMap.get(teamId);
+
+                    if (team == null) {
+                        return null;
+                    }
+
+                    return new MatchTeamDto(
+                            team.getId(),
+                            team.getGameId(),
+                            team.getName(),
+                            team.getStatus(),
+                            team.getType(),
+                            matchTeam.getResult(),
+                            team.getPlayers()
+                    );
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 }

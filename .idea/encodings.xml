@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$/backend/Tournament_Service/test-output/bracket_after_cancel.json" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/backend/Tournament_Service/test-output/bracket_after_update.json" charset="windows-1251" />
+    <file url="file://$PROJECT_DIR$/backend/Tournament_Service/test-output/bracket_generate.json" charset="windows-1251" />
+  </component>
+</project>

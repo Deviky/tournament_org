@@ -1,0 +1,10 @@
+eureka:
+  client:
+    service-url:
+      defaultZone: http://discovery:8761/eureka
+
+spring:
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+  redis:
+    host: host.docker.internal

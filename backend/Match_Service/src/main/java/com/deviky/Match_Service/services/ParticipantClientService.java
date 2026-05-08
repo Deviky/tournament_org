@@ -14,15 +14,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ParticipantClientService {
     private final WebClient.Builder webClientBuilder;
+
     private WebClient getWebClient() {
-        return webClientBuilder.baseUrl("http://PARTICIPANT-SERVIE").build();
+        return webClientBuilder.baseUrl("http://PARTICIPANT-SERVICE").build();
     }
 
     public ApiResponse<List<Team>> getTeams(List<Long> teamIds) {
         try {
-            return getWebClient().post()  // Используем POST вместо GET
-                    .uri("/api/participant/teams/public/get_by_ids")
-                    .bodyValue(teamIds)  // Отправляем список в теле запроса
+            return getWebClient().get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/participant/teams/public/get_by_ids")
+                            .queryParam("teamIds", teamIds)
+                            .build()
+                    )
                     .retrieve()
                     .onStatus(HttpStatusCode::isError,
                             response -> response.bodyToMono(String.class)

@@ -1,44 +1,5 @@
 spring:
   application:
     name: PARTICIPANT-SERVICE
-
   config:
     import: optional:configserver:http://localhost:8888
-
-  datasource:
-    url: jdbc:postgresql://localhost:5432/Tournament_org
-    username: postgres
-    password: 915327
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  redis:
-    host: localhost
-    port: 6379
-    password: 915327
-    database: 0
-
-server:
-  port: 8072
-
-logging:
-  level:
-    org:
-      springframework:
-        web: DEBUG
-    root: INFO
-
-eureka:
-  instance:
-    hostname: localhost
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka

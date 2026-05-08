@@ -25,5 +25,5 @@ public class MatchDto {
     String links;
     LocalDateTime startAt;
     LocalDateTime endAt;
-    List<Team> teams;
+    List<MatchTeamDto> teams;
 }

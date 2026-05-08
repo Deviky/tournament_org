@@ -1,0 +1,52 @@
+server:
+  port: 8777
+
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - RemoveRequestHeader=Cookie
+        - RemoveResponseHeader=X-Powered-By
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://localhost:5173"
+              - "http://127.0.0.1:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders:
+              - "X-Token-Expired"
+      routes:
+        - id: PARTICIPANT-SERVICE
+          uri: lb://PARTICIPANT-SERVICE
+          predicates:
+            - Path=/api/participant/**
+        - id: MATCH-SERVICE
+          uri: lb://MATCH-SERVICE
+          predicates:
+            - Path=/api/matches/**
+        - id: TOURNAMENT-SERVICE
+          uri: lb://TOURNAMENT-SERVICE
+          predicates:
+            - Path=/api/tournaments/**
+        - id: AUTH-SERVICE
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+        - id: GAME-SERVICE
+          uri: lb://GAME-SERVICE
+          predicates:
+            - Path=/api/game/**
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG

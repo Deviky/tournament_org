@@ -25,6 +25,8 @@ public class Match {
     @Column(name = "tournament_id")
     Long tournamentId;
     @Nonnull
+    @Convert(converter = MatchStatusConverter.class)
+    @Column(name = "status")
     MatchStatus status;
     String links;
     @Column(name = "start_at")
@@ -32,5 +34,6 @@ public class Match {
     @Column(name = "end_at")
     LocalDateTime endAt;
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<MatchTeam> matchTeams = new ArrayList<>();
 }

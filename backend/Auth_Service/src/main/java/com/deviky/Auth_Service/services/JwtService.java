@@ -23,12 +23,13 @@ public class JwtService {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
     }
 
-    public String generateAccessToken(String username, Role role) {
+    public String generateAccessToken(Long userId, String username, Role role) {
 
         Instant now = Instant.now();
 
         return Jwts.builder()
                 .setSubject(username)
+                .claim("userId", userId)
                 .claim("role", role.name())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plusSeconds(5 * 60)))

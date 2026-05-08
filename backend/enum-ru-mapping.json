@@ -1,0 +1,51 @@
+{
+  "tournamentStatus": {
+    "CREATED": "Создан",
+    "REGISTRATION": "Идет регистрация",
+    "REGISTRATION_CLOSED": "Регистрация закрыта",
+    "BRACKET_CREATED": "Сетка создана",
+    "RUNNING": "Проводится",
+    "FINISHED": "Завершен",
+    "CANCEL": "Отменен",
+    "BANNED": "Заблокирован"
+  },
+  "tournamentType": {
+    "PUBLIC": "Публичный",
+    "PRIVATE": "Приватный"
+  },
+  "teamStatus": {
+    "ACTIVE": "Активна",
+    "INACTIVE": "Неактивна",
+    "DELETED": "Удалена"
+  },
+  "teamType": {
+    "PUBLIC": "Открытая",
+    "PRIVATE": "Закрытая"
+  },
+  "teamPlayerStatus": {
+    "ACTIVE": "Активен",
+    "INVITED": "Приглашен",
+    "REQUESTED": "Ожидает одобрения",
+    "LEAVED": "Покинул команду",
+    "KICKED": "Исключен",
+    "CANCELED": "Отклонен"
+  },
+  "tournamentTeamStatus": {
+    "WAITING_APPROVE": "Ожидает одобрения",
+    "REGISTERED": "Зарегистрирована",
+    "KICKED": "Исключена",
+    "LEAVED": "Покинула турнир"
+  },
+  "matchStatus": {
+    "COMING": "Скоро",
+    "RUNNING": "Идет",
+    "FINISHED": "Завершен",
+    "CANCELED": "Отменен"
+  },
+  "matchResult": {
+    "NOT_PLAYED": "Не сыгран",
+    "WINNER": "Победа",
+    "LOSER": "Поражение",
+    "DRAW": "Ничья"
+  }
+}

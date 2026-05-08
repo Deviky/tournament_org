@@ -1,20 +1,5 @@
 spring:
   application:
     name: INTEGRATION-SERVICE
-
   config:
     import: optional:configserver:http://localhost:8888
-
-faceit_cs2:
-  api:
-    key: e18f2af3-1e6b-48d4-8177-8c8f94b19cd9
-
-server:
-  port: 8125
-
-eureka:
-  instance:
-    hostname: localhost
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka

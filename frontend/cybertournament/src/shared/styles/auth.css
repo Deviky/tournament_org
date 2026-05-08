@@ -1,0 +1,260 @@
+
+/* =========================
+   BASE THEME
+========================= */
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --border: #30363d;
+
+  --text: #c9d1d9;
+  --text-muted: #8b949e;
+  --text-title: #ffffff;
+
+  --primary: #58a6ff;
+  --success: #238636;
+  --danger: #ff6b6b;
+
+  --radius: 8px;
+  --transition: 0.15s ease;
+}
+
+/* =========================
+   GLOBAL AUTH LAYOUT
+========================= */
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--text);
+  padding: 20px;
+}
+
+/* =========================
+   CARD
+========================= */
+.auth-card {
+  width: min(440px, 100%);
+
+  background: rgba(22, 27, 34, 0.84);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 60px rgba(1, 4, 9, 0.28);
+
+  padding: 26px;
+}
+
+/* =========================
+   TITLE
+========================= */
+.auth-title {
+  font-size: 22px;
+  font-weight: 700;
+
+  color: var(--text-title);
+  margin-bottom: 14px;
+}
+
+/* =========================
+   INPUTS
+========================= */
+.auth-input {
+  width: 100%;
+  padding: 10px 12px;
+
+  margin-top: 6px;
+  margin-bottom: 12px;
+
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  color: var(--text);
+  font-size: 13px;
+
+  outline: none;
+  transition: var(--transition);
+}
+
+.auth-input:focus {
+  border-color: var(--primary);
+}
+
+/* =========================
+   TEXTAREA
+========================= */
+textarea.auth-input {
+  resize: none;
+  min-height: 140px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+/* =========================
+   ERROR (FIXED VISIBILITY)
+========================= */
+.auth-error {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+
+  font-size: 13px;
+
+  color: var(--danger);
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+
+  border-radius: var(--radius);
+}
+
+/* =========================
+   BUTTONS
+========================= */
+.auth-btn {
+  width: 100%;
+  padding: 11px;
+
+  border-radius: var(--radius);
+  border: none;
+
+  cursor: pointer;
+  font-weight: 600;
+
+  background: var(--success);
+  color: white;
+
+  transition: var(--transition);
+}
+
+.auth-btn:hover {
+  background: #2ea043;
+}
+
+/* =========================
+   SECONDARY BUTTONS (switch, etc)
+========================= */
+.btn {
+  padding: 6px 10px;
+  border-radius: var(--radius);
+
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--success);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: #21262d;
+}
+
+/* =========================
+   SWITCH BLOCK (player/org)
+========================= */
+.row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* =========================
+   GAME CARD
+========================= */
+.card {
+  position: relative;
+
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  padding: 14px;
+  margin-bottom: 14px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* =========================
+   REMOVE BUTTON (FIXED)
+========================= */
+.remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  width: 22px;
+  height: 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  font-size: 12px;
+  line-height: 1;
+
+  border-radius: 6px;
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  transition: var(--transition);
+}
+
+.remove-btn:hover {
+  background: #21262d;
+  color: white;
+  border-color: var(--primary);
+}
+
+/* =========================
+   LINKS
+========================= */
+.auth-link {
+  margin-top: 10px;
+  text-align: center;
+
+  font-size: 13px;
+  color: var(--text-muted);
+
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .auth-page {
+    padding: 14px;
+    align-items: stretch;
+  }
+
+  .auth-card {
+    padding: 20px 16px;
+  }
+
+  .row {
+    flex-direction: column;
+  }
+}

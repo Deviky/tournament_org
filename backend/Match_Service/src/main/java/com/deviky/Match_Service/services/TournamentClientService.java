@@ -42,7 +42,7 @@ public class TournamentClientService {
     public ApiResponse<Void> updateBracket(Long tournamentId, MatchResultDto matchResult) {
         try {
             return getWebClient().post()
-                    .uri("/api/tournaments/private/bracket/update/{tournamentId}", tournamentId)
+                    .uri("/api/tournaments/organizer/bracket/update/{tournamentId}", tournamentId)
                     .bodyValue(matchResult)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError,

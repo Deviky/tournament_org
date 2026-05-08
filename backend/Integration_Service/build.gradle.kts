@@ -2,7 +2,7 @@ import org.gradle.kotlin.dsl.extra
 
 plugins {
 	java
-	id("org.springframework.boot") version "3.5.12-SNAPSHOT"
+	id("org.springframework.boot") version "3.5.14"
 	id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -24,10 +24,9 @@ configurations {
 
 repositories {
 	mavenCentral()
-	maven { url = uri("https://repo.spring.io/snapshot") }
 }
 
-extra["springCloudVersion"] = "2025.0.1"
+extra["springCloudVersion"] = "2025.0.2"
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")

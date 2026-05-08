@@ -71,13 +71,35 @@ public class TournamentController {
     // 📋 Получение турниров
     // ==============================
 
-    @GetMapping("/public/get")
+    @GetMapping("/public/get_all")
     public ResponseEntity<ApiResponse<List<TournamentDto>>> getAll() {
 
         ApiResponse<List<TournamentDto>> response =
                 tournamentService.getTournaments();
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/public/get/{tournamentId}")
+    public ResponseEntity<ApiResponse<TournamentDto>> get(@PathVariable Long tournamentId) {
+
+        ApiResponse<TournamentDto> response =
+                tournamentService.getTournament(tournamentId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/organizer/teams/{tournamentId}")
+    public ResponseEntity<ApiResponse<List<TournamentTeamEntryDto>>> getTournamentTeamEntries(
+            @RequestHeader("X-User-Id") Long organizerId,
+            @PathVariable Long tournamentId) {
+
+        ApiResponse<List<TournamentTeamEntryDto>> response =
+                tournamentService.getTournamentTeamEntries(tournamentId, organizerId);
+
+        return ResponseEntity
+                .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
+                .body(response);
     }
 
     @GetMapping("/public/get_by_game/{gameId}")
@@ -198,7 +220,7 @@ public class TournamentController {
     // 🚪 Выход / кик / апрув
     // ==============================
 
-    @DeleteMapping("/player/leave{tournamentId}/teams/{teamId}")
+    @DeleteMapping("/player/leave/{tournamentId}/teams/{teamId}")
     public ResponseEntity<ApiResponse<String>> leaveTeam(
             @RequestHeader("X-User-Id") Long playerId,
             @PathVariable Long tournamentId,
@@ -259,6 +281,19 @@ public class TournamentController {
                 .body(response);
     }
 
+    @PostMapping("/organizer/close_registration/{tournamentId}")
+    public ResponseEntity<ApiResponse<String>> closeRegistrationTournament(
+            @RequestHeader("X-User-Id") Long organizerId,
+            @PathVariable Long tournamentId) {
+
+        ApiResponse<String> response =
+                tournamentService.closeRegistrationTournament(tournamentId, organizerId);
+
+        return ResponseEntity
+                .status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK)
+                .body(response);
+    }
+
     @PostMapping("/organizer/start/{tournamentId}")
     public ResponseEntity<ApiResponse<String>> startTournament(
             @RequestHeader("X-User-Id") Long organizerId,
@@ -297,7 +332,7 @@ public class TournamentController {
                 .body(response);
     }
 
-    @PostMapping("/organizer/cancel/{id}")
+    @PostMapping("/organizer/cancel/{tournamentId}")
     public ApiResponse<String> cancelTournament(
             @RequestHeader("X-User-Id") Long organizerId,
             @PathVariable Long tournamentId

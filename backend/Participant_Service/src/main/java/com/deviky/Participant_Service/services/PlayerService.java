@@ -140,6 +140,45 @@ public class PlayerService {
         return mapToPlayerDto(player, memberships);
     }
 
+    @Transactional
+    public ApiResponse<PlayerDto> updatePlayer(Long selfId, UpdatePlayerRequest dto) {
+        try {
+            Player player = playerRepository.findById(selfId)
+                    .orElseThrow(() -> new Exception("Игрок не найден"));
+
+            if (dto.getNickname() == null || dto.getNickname().isBlank()) {
+                return new ApiResponse<>("Никнейм обязателен", null, true);
+            }
+
+            if (dto.getGames() == null || dto.getGames().isEmpty()) {
+                return new ApiResponse<>("Должна быть выбрана хотя бы одна игра", null, true);
+            }
+
+            player.setNickname(dto.getNickname().trim());
+            player.setGames(dto.getGames());
+
+            ApiResponse<Void> checkResult = gameClientService.checkPlayer(player);
+            if (checkResult.isError()) {
+                return new ApiResponse<>(
+                        "Игрок некорректен: " + checkResult.getMessage(),
+                        null,
+                        true
+                );
+            }
+
+            Player saved = playerRepository.save(player);
+            List<TeamPlayer> memberships = teamPlayerRepository.findByPlayerId(saved.getId());
+
+            return new ApiResponse<>(
+                    "Профиль игрока обновлен",
+                    mapToPlayerDto(saved, memberships),
+                    false
+            );
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при обновлении игрока: " + ex.getMessage(), null, true);
+        }
+    }
+
     private PlayerDto mapToPlayerDto(Player player, List<TeamPlayer> memberships) {
 
         List<TeamSummaryDto> teams = memberships.stream()

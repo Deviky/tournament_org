@@ -1,0 +1,626 @@
+
+/* =========================
+   DESIGN TOKENS
+========================= */
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #21262d;
+  --border: #30363d;
+
+  --text: #c9d1d9;
+  --text-muted: #8b949e;
+  --text-title: #ffffff;
+
+  --primary: #58a6ff;
+  --success: #238636;
+
+  --radius: 8px;
+  --transition: 0.15s ease;
+}
+
+/* =========================
+   RESET
+========================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  width: 100%;
+}
+
+#root {
+  display: flex;
+}
+
+body {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body::before {
+  z-index: -2;
+  background:
+    url("../assets/back_tournament_site.png") center center / cover no-repeat;
+  transform: scale(1.04);
+  transform-origin: center;
+}
+
+body::after {
+  z-index: -1;
+  background:
+    radial-gradient(circle at top center, rgba(255, 180, 80, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(7, 10, 15, 0.58), rgba(7, 10, 15, 0.82));
+}
+
+/* =========================
+   LAYOUT
+========================= */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 20px 16px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+}
+
+.layout {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  width: 100%;
+  justify-content: center;
+}
+
+/* =========================
+   HEADER (FIXED ICON BUG)
+========================= */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+  padding: 12px 18px;
+
+  border-bottom: 1px solid var(--border);
+  background: rgba(13, 17, 23, 0.78);
+  backdrop-filter: blur(14px);
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  /* 🔥 важно: не даём children сжиматься */
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* =========================
+   SEARCH
+========================= */
+.search {
+  flex: 1;
+  min-width: 180px;
+
+  padding: 8px 10px;
+  border-radius: var(--radius);
+
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* =========================
+   NAV (FIX FLEX SHRINK ISSUES)
+========================= */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.nav .btn {
+  width: auto;
+  max-width: 100%;
+  flex: 0 1 auto;
+}
+
+/* =========================
+   PROFILE (FIXED — NO MORE SQUEEZE)
+========================= */
+.profile {
+  flex: 0 0 auto;   /* 🔥 не даём сжиматься */
+
+  width: 36px;
+  height: 36px;
+
+  min-width: 36px;
+  min-height: 36px;
+
+  border-radius: 50%;
+  background: var(--surface);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+  line-height: 1; /* 🔥 убирает вертикальное искажение */
+
+  cursor: pointer;
+  transition: var(--transition);
+
+  overflow: hidden; /* 🔥 защита от сплющивания */
+}
+
+.profile:hover {
+  background: var(--surface-2);
+}
+
+/* =========================
+   INPUTS
+========================= */
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 9px 10px;
+
+  margin-top: 6px;
+  margin-bottom: 10px;
+
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  color: var(--text);
+  font-size: 13px;
+
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary);
+}
+
+/* =========================
+   BUTTONS (CLEAN + BALANCED)
+========================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 10px;
+  border-radius: var(--radius);
+
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+
+  cursor: pointer;
+  border: none;
+
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+/* PRIMARY */
+.btn-primary {
+  background: var(--success);
+  color: white;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* SECONDARY */
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-2);
+}
+
+/* =========================
+   CARD BUTTON (LIGHT ACTION)
+========================= */
+.btn-card-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+
+  border-radius: 6px;
+
+  background: transparent;
+  color: var(--primary);
+
+  border: 1px solid var(--border);
+
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-card-primary:hover {
+  background: rgba(88, 166, 255, 0.08);
+  border-color: var(--primary);
+}
+
+/* =========================
+   FILTERS
+========================= */
+.filters {
+  width: 280px;
+  position: sticky;
+  top: 14px;
+  flex-shrink: 0;
+
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+
+  padding: 14px;
+}
+
+/* =========================
+   CONTENT
+========================= */
+.content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.content h1 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+/* =========================
+   GRID
+========================= */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 12px;
+  justify-items: stretch;
+}
+
+/* =========================
+   CARD
+========================= */
+.tournament-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+
+  border-radius: 8px;
+  padding: 14px;
+
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  transition: var(--transition);
+}
+
+.tournament-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+/* TEXT */
+.tournament-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 6px 0 10px;
+}
+
+.tournament-desc {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* FOOTER */
+.tournament-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin-top: 10px;
+  padding-top: 10px;
+
+  border-top: 1px solid var(--border);
+}
+
+.site-footer {
+  margin-top: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 13, 19, 0.88);
+  backdrop-filter: blur(12px);
+}
+
+.site-footer__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.site-footer__brand {
+  max-width: 520px;
+}
+
+.site-footer__logo {
+  color: var(--text-title);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.site-footer__brand p {
+  color: var(--text-muted);
+}
+
+.site-footer__links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.site-footer__link {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.site-footer__link:hover {
+  border-color: var(--primary);
+  color: var(--text-title);
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.faq-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.faq-card {
+  background: rgba(18, 24, 33, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  backdrop-filter: blur(8px);
+}
+
+.faq-card h3 {
+  color: var(--text-title);
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.faq-card p {
+  color: var(--text-muted);
+}
+
+/* BADGE */
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+
+  font-size: 10px;
+  color: var(--primary);
+
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+}
+
+/* =========================
+   PAGINATION
+========================= */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 18px;
+}
+
+.pagination button {
+  padding: 6px 10px;
+
+  border-radius: 6px;
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+  color: var(--text);
+
+  cursor: pointer;
+}
+
+.pagination button:hover {
+  background: var(--surface-2);
+  border-color: var(--primary);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 900px) {
+  .layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters {
+    width: 100%;
+    position: relative;
+    top: 0;
+  }
+
+  .header {
+    padding: 12px 14px;
+  }
+
+  .search {
+    width: 100%;
+    order: 3;
+  }
+
+  .site-footer__inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .site-footer__links {
+    justify-content: center;
+  }
+
+  .page-toolbar {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 14px 12px;
+  }
+
+  .header {
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .logo {
+    width: 100%;
+    text-align: center;
+  }
+
+  .nav {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .nav .btn,
+  .nav .profile {
+    width: 100%;
+  }
+
+  .profile {
+    height: 42px;
+    min-height: 42px;
+    border-radius: 12px;
+  }
+
+  .grid,
+  .faq-list {
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tournament-footer .btn-card-primary,
+  .tournament-footer .btn-secondary,
+  .tournament-footer .btn-primary,
+  .site-footer__link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .site-footer__inner {
+    padding: 20px 14px 24px;
+  }
+
+  .site-footer__brand {
+    max-width: none;
+  }
+}

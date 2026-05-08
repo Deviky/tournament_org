@@ -34,12 +34,16 @@ public class ParticipantClientService {
 
     public ApiResponse<List<Team>> getTeams(List<Long> teamIds) {
         try {
-            return getWebClient().post()
-                    .uri("/api/participant/teams/public/get_by_ids")
-                    .bodyValue(teamIds)
+            return getWebClient().get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/participant/teams/public/get_by_ids")
+                            .queryParam("teamIds", teamIds)
+                            .build()
+                    )
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<ApiResponse<List<Team>>>() {})
                     .block();
+
         } catch (Exception e) {
             return new ApiResponse<>("Ошибка получения команд: " + e.getMessage(), null, true);
         }

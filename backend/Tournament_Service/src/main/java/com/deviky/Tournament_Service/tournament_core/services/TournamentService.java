@@ -5,6 +5,7 @@ import com.deviky.Tournament_Service.bracket.bracket_core.algorithm_base.Bracket
 import com.deviky.Tournament_Service.bracket.bracket_core.algorithm_base.BracketAlgorithmFactory;
 import com.deviky.Tournament_Service.bracket.bracket_core.models.*;
 import com.deviky.Tournament_Service.tournament_core.dto.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.deviky.Tournament_Service.tournament_core.models.*;
 import com.deviky.Tournament_Service.tournament_core.repositories.TournamentRepository;
 import com.deviky.Tournament_Service.tournament_core.repositories.TournamentTeamRepository;
@@ -30,6 +31,7 @@ public class TournamentService {
     private final ParticipantClientService participantClientService;
     private final MatchClientService matchClientService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public ApiResponse<Map<String, ObjectNode>> getAlgorithms(Integer gameId){
         try{
@@ -93,6 +95,16 @@ public class TournamentService {
         }
 
         BracketAlgorithm bracketAlgorithm = bracketAlgorithmFactory.getAlgorithm(dto.getAlgorithmName());
+        AlgorithmParams algorithmParams;
+
+        try {
+            Class<? extends AlgorithmParams> paramsClass = bracketAlgorithm.getAlgorithmParamsClass();
+            algorithmParams = dto.getAlgorithmParams() == null || dto.getAlgorithmParams().isNull()
+                    ? paramsClass.getDeclaredConstructor().newInstance()
+                    : objectMapper.treeToValue(dto.getAlgorithmParams(), paramsClass);
+        } catch (Exception e) {
+            return new ApiResponse<>("Ошибка преобразования параметров алгоритма: " + e.getMessage(), null, true);
+        }
 
         List<TournamentTeam> tournamentTeams = tournament.getTeams();
         List<Long> teamIds = tournamentTeams.stream()
@@ -104,10 +116,7 @@ public class TournamentService {
                 .toList();
 
 
-        Bracket bracket = bracketAlgorithm.generate(teamIds, dto.getAlgorithmParams());
-
-        tournament.setBracket(bracket.toJsonStr());
-        tournamentRepository.save(tournament);
+        Bracket bracket = bracketAlgorithm.generate(teamIds, algorithmParams);
 
         return new ApiResponse<>("", bracket,false);
 
@@ -239,6 +248,11 @@ public class TournamentService {
 
                     CreateMatchDto dto = new CreateMatchDto();
                     dto.setTournamentId(tournamentId);
+                    dto.setStartAt(
+                            tournament.getStartAt() != null
+                                    ? tournament.getStartAt()
+                                    : LocalDateTime.now()
+                    );
 
                     List<Long> teamIds = match.getSlots()
                             .stream()
@@ -377,11 +391,19 @@ public class TournamentService {
                     .map(tt -> tt.getId().getTeamId())
                     .toList();
 
-            ApiResponse<List<Team>> teamsResponse =
-                    participantClientService.getTeams(teamIds);
+            List<Team> teams = new ArrayList<>();
 
-            if (teamsResponse.isError())
-                return new ApiResponse<>(teamsResponse.getMessage(), null, true);
+            if (!teamIds.isEmpty()) {
+                ApiResponse<List<Team>> teamsResponse =
+                        participantClientService.getTeams(teamIds);
+
+                if (teamsResponse.isError())
+                    return new ApiResponse<>(teamsResponse.getMessage(), null, true);
+
+                teams = teamsResponse.getData() != null
+                        ? new ArrayList<>(teamsResponse.getData())
+                        : new ArrayList<>();
+            }
 
 
             ApiResponse<List<Match>> matchesResponse =
@@ -426,7 +448,7 @@ public class TournamentService {
                     .endAt(tournament.getEndAt())
                     .bracket(bracket)
                     .organization(organizationResponse.getData())
-                    .teams(teamsResponse.getData())
+                    .teams(teams)
                     .matches(matchesResponse.getData())
                     .build();
 
@@ -435,6 +457,69 @@ public class TournamentService {
         }
         catch (Exception e) {
             return new ApiResponse<>("Ошибка при получении турнира: " + e.getMessage(), null, true);
+        }
+    }
+
+    public ApiResponse<List<TournamentTeamEntryDto>> getTournamentTeamEntries(Long tournamentId, Long organizerId) {
+        try {
+            Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+            if (tournament == null) {
+                return new ApiResponse<>("РўР°РєРѕРіРѕ С‚СѓСЂРЅРёСЂР° РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚", null, true);
+            }
+
+            if (!Objects.equals(tournament.getOrganizerId(), organizerId)) {
+                return new ApiResponse<>("РўРѕР»СЊРєРѕ РѕСЂРіР°РЅРёР·Р°С‚РѕСЂ РјРѕР¶РµС‚ СЃРјРѕС‚СЂРµС‚СЊ Р·Р°СЏРІРєРё РєРѕРјР°РЅРґ", null, true);
+            }
+
+            List<TournamentTeam> tournamentTeams = tournament.getTeams();
+
+            if (tournamentTeams == null || tournamentTeams.isEmpty()) {
+                return new ApiResponse<>("", Collections.emptyList(), false);
+            }
+
+            List<Long> teamIds = tournamentTeams.stream()
+                    .map(tt -> tt.getId().getTeamId())
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+
+            List<Team> teams = new ArrayList<>();
+
+            if (!teamIds.isEmpty()) {
+                ApiResponse<List<Team>> teamsResponse = participantClientService.getTeams(teamIds);
+
+                if (teamsResponse.isError()) {
+                    return new ApiResponse<>(teamsResponse.getMessage(), null, true);
+                }
+
+                teams = teamsResponse.getData() != null
+                        ? new ArrayList<>(teamsResponse.getData())
+                        : new ArrayList<>();
+            }
+
+            Map<Long, Team> teamsById = teams
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toMap(Team::getId, team -> team, (left, right) -> left));
+
+            List<TournamentTeamEntryDto> entries = tournamentTeams.stream()
+                    .map(tt -> TournamentTeamEntryDto.builder()
+                            .tournamentId(tt.getId().getTournamentId())
+                            .teamId(tt.getId().getTeamId())
+                            .registeredAt(tt.getRegisteredAt())
+                            .status(tt.getStatus())
+                            .team(teamsById.get(tt.getId().getTeamId()))
+                            .build())
+                    .sorted(Comparator
+                            .comparing(TournamentTeamEntryDto::getStatus)
+                            .thenComparing(TournamentTeamEntryDto::getRegisteredAt,
+                                    Comparator.nullsLast(Comparator.reverseOrder())))
+                    .toList();
+
+            return new ApiResponse<>("", entries, false);
+        } catch (Exception e) {
+            return new ApiResponse<>("РћС€РёР±РєР° РїСЂРё РїРѕР»СѓС‡РµРЅРёРё РєРѕРјР°РЅРґ С‚СѓСЂРЅРёСЂР°: " + e.getMessage(), null, true);
         }
     }
 
@@ -782,6 +867,14 @@ public class TournamentService {
             }
 
             if (approve) {
+                long registeredTeamsCount = tournament.getTeams().stream()
+                        .filter(tt -> tt.getStatus() == TournamentTeamStatus.REGISTERED)
+                        .count();
+
+                if (registeredTeamsCount >= tournament.getMaxTeams()) {
+                    return new ApiResponse<>("Р’ С‚СѓСЂРЅРёСЂРµ СѓР¶Рµ РЅР°Р±СЂР°РЅРѕ РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ С‡РёСЃР»Рѕ РєРѕРјР°РЅРґ", null, true);
+                }
+
                 tournamentTeam.setStatus(TournamentTeamStatus.REGISTERED);
             } else {
                 tournamentTeam.setStatus(TournamentTeamStatus.KICKED);
@@ -822,6 +915,35 @@ public class TournamentService {
         tournamentRepository.save(tournament);
 
         return new ApiResponse<>("Началась регистрация на турнир", null, false);
+    }
+
+    @Transactional
+    public ApiResponse<String> closeRegistrationTournament(Long tournamentId, Long organizerId) {
+
+        Tournament tournament = tournamentRepository.findById(tournamentId).orElse(null);
+
+        if (tournament == null)
+            return new ApiResponse<>("РўСѓСЂРЅРёСЂ РЅРµ РЅР°Р№РґРµРЅ", null, true);
+
+        if (!Objects.equals(tournament.getOrganizerId(), organizerId)) {
+            return new ApiResponse<>("РўРѕР»СЊРєРѕ РѕСЂРіР°РЅРёР·Р°С‚РѕСЂ РјРѕР¶РµС‚ РІС‹РїРѕР»РЅСЏС‚СЊ СЌС‚Рѕ РґРµР№СЃС‚РІРёРµ", null, true);
+        }
+
+        if (tournament.getStatus() != TournamentStatus.REGISTRATION)
+            return new ApiResponse<>("Р РµРіРёСЃС‚СЂР°С†РёСЋ РЅРµР»СЊР·СЏ Р·Р°РєСЂС‹С‚СЊ РІ С‚РµРєСѓС‰РµРј СЃС‚Р°С‚СѓСЃРµ", null, true);
+
+        long registeredTeamsCount = tournament.getTeams().stream()
+                .filter(tt -> tt.getStatus() == TournamentTeamStatus.REGISTERED)
+                .count();
+
+        if (registeredTeamsCount < Math.max(2, tournament.getMinTeams())) {
+            return new ApiResponse<>("РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РєРѕРјР°РЅРґ РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ СЂРµРіРёСЃС‚СЂР°С†РёРё", null, true);
+        }
+
+        tournament.setStatus(TournamentStatus.REGISTRATION_CLOSED);
+        tournamentRepository.save(tournament);
+
+        return new ApiResponse<>("Р РµРіРёСЃС‚СЂР°С†РёСЏ Р·Р°РєСЂС‹С‚Р°", null, false);
     }
 
     @Transactional

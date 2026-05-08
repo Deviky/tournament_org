@@ -1,0 +1,6 @@
+server:
+  port: 8125
+
+faceit_cs2:
+  api:
+    key: e18f2af3-1e6b-48d4-8177-8c8f94b19cd9

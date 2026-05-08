@@ -1,0 +1,23 @@
+server:
+  port: 8069
+
+spring:
+  output:
+    ansi:
+      enabled: always
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+debug: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    org.springframework.web: DEBUG
+    com.deviky: DEBUG
+    com.deviky.Game_Service.game_core.models: DEBUG
+    com.deviky.Game_Service.game_core.services: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"

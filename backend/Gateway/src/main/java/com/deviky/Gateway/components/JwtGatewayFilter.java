@@ -1,17 +1,21 @@
-package com.deviky.gateway.components;
+package com.deviky.Gateway.components;
 
-import com.deviky.Gateway.components.JwtUtil;
 import com.deviky.Gateway.models.Role;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtGatewayFilter implements GlobalFilter {
@@ -20,15 +24,21 @@ public class JwtGatewayFilter implements GlobalFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
         String path = exchange.getRequest().getURI().getPath();
+        HttpMethod requestMethod = exchange.getRequest().getMethod();
+        String method = requestMethod != null ? requestMethod.name() : "UNKNOWN";
 
-        // Public paths — без проверки JWT
-        if (path.contains("/public/")) {
+        log.info("Incoming request: {} {}", method, path);
+
+        // Let CORS preflight requests pass before any JWT checks.
+        if (requestMethod == HttpMethod.OPTIONS) {
             return chain.filter(exchange);
         }
 
-        // Authorization header
+        if (isPublic(path)) {
+            return chain.filter(exchange);
+        }
+
         String authHeader = exchange.getRequest()
                 .getHeaders()
                 .getFirst("Authorization");
@@ -41,48 +51,94 @@ public class JwtGatewayFilter implements GlobalFilter {
 
         try {
             Claims claims = jwtUtil.parse(token);
-            String userId = claims.getSubject();
+
+            Object userIdClaim = claims.get("userId");
+            String userId = userIdClaim != null ? String.valueOf(userIdClaim) : null;
             String role = claims.get("role", String.class);
 
-            // Проверка доступа
-            if (!checkAccess(path, role)) {
+            if (requiresUserHeader(path) && userId == null) {
                 return forbidden(exchange);
             }
 
-            // Добавляем X-User-Id только для всех, кроме public/private
-            if (!path.contains("/public/") && !path.contains("/private/")) {
+            if (!hasAccess(path, role)) {
+                return forbidden(exchange);
+            }
+
+            if (requiresUserHeader(path)) {
                 ServerHttpRequest request = exchange.getRequest().mutate()
                         .header("X-User-Id", userId)
                         .build();
+
                 return chain.filter(exchange.mutate().request(request).build());
             }
 
             return chain.filter(exchange);
 
-        } catch (Exception e) {
-            return unauthorized(exchange);
+        } catch (ExpiredJwtException e) {
+            log.info("ACCESS TOKEN EXPIRED");
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            exchange.getResponse().getHeaders().add("X-Token-Expired", "true");
+            return exchange.getResponse().setComplete();
+
+        } catch (JwtException e) {
+            log.warn("INVALID TOKEN");
+            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+            return exchange.getResponse().setComplete();
         }
     }
 
-    private boolean checkAccess(String path, String role) {
+    private boolean isPublic(String path) {
+        return path.contains("/public/") || path.contains("/auth/");
+    }
 
-        // Admin имеет доступ ко всем private
-        if (Role.ADMIN.name().equals(role)) {
+    private boolean isPrivate(String path) {
+        return path.contains("/private/");
+    }
+
+    private boolean isPlayer(String path) {
+        return path.contains("/player/");
+    }
+
+    private boolean isOrganizer(String path) {
+        return path.contains("/organizer/");
+    }
+
+    private boolean isModerator(String path) {
+        return path.contains("/moderator/");
+    }
+
+    private boolean requiresUserHeader(String path) {
+        return isPlayer(path) || isOrganizer(path) || isModerator(path);
+    }
+
+    private boolean hasAccess(String path, String role) {
+        Role userRole;
+
+        try {
+            userRole = Role.valueOf(role);
+        } catch (Exception e) {
+            return false;
+        }
+
+        if (userRole == Role.ADMIN) {
             return true;
         }
 
-        if (path.contains("/player/"))
-            return role.equals(Role.PLAYER.name());
-
-        if (path.contains("/organizer/"))
-            return role.equals(Role.ORGANIZER.name());
-
-        if (path.contains("/moderator/"))
-            return role.equals(Role.MODERATOR.name());
-
-        // Private доступ только для Admin, остальным запрещаем
-        if (path.contains("/private/"))
+        if (isPrivate(path)) {
             return false;
+        }
+
+        if (isPlayer(path)) {
+            return userRole == Role.PLAYER;
+        }
+
+        if (isOrganizer(path)) {
+            return userRole == Role.ORGANIZER;
+        }
+
+        if (isModerator(path)) {
+            return userRole == Role.MODERATOR;
+        }
 
         return true;
     }
