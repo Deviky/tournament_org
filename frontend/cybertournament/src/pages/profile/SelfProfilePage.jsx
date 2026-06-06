@@ -2,10 +2,12 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/shared/ui/Header";
 import { useAuthStore } from "@/app/store/authStore";
+import StaffDashboardPage from "@/pages/profile/StaffDashboardPage";
 import {
   getProfilePathByIdentity,
   getRoleLabel,
   hasDirectProfileByIdentity,
+  isStaffRole,
 } from "@/shared/lib/authIdentity";
 import "@/shared/styles/tournament.css";
 
@@ -28,41 +30,50 @@ export default function SelfProfilePage() {
       <Header />
 
       <div className="container tournament-page">
-        <div className="section">
-          <h3>Мой профиль</h3>
+        {isStaffRole(currentRole) ? (
+          <StaffDashboardPage currentRole={currentRole} currentSubject={currentSubject} />
+        ) : (
+          <div className="section">
+            <h3>Мой профиль</h3>
 
-          {canOpenDirectProfile ? (
-            <>
-              <p>Профиль определён автоматически, можно сразу перейти к просмотру или редактированию.</p>
-              <div className="team-actions-row" style={{ marginTop: 16 }}>
-                <button className="btn btn-primary" onClick={() => navigate(directProfilePath)}>
-                  Открыть профиль
-                </button>
-                <button className="btn btn-secondary" onClick={() => navigate("/profile/edit")}>
-                  Редактировать профиль
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <p>
-                Для роли <strong>{roleLabel}</strong> отдельный профиль участника не предусмотрен.
-              </p>
-              <p>
-                Такой аккаунт может входить в систему и пользоваться служебными возможностями, но не связан со страницей игрока или организатора.
-              </p>
-              <div className="team-actions-row" style={{ marginTop: 16 }}>
-                <button className="btn btn-secondary" onClick={() => navigate("/")}>
-                  На главную
-                </button>
-              </div>
-              <div className="tournament-meta" style={{ marginTop: 16 }}>
-                <div>Роль: {roleLabel}</div>
-                <div>Email: {currentSubject || "Не указан"}</div>
-              </div>
-            </>
-          )}
-        </div>
+            {canOpenDirectProfile ? (
+              <>
+                <p>
+                  Профиль определен автоматически. Можно сразу перейти к просмотру или
+                  редактированию.
+                </p>
+                <div className="team-actions-row" style={{ marginTop: 16 }}>
+                  <button className="btn btn-primary" onClick={() => navigate(directProfilePath)}>
+                    Открыть профиль
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => navigate("/profile/edit")}>
+                    Редактировать профиль
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  Для роли <strong>{roleLabel}</strong> отдельный профиль участника не
+                  предусмотрен.
+                </p>
+                <p>
+                  Такой аккаунт может входить в систему и пользоваться служебными
+                  возможностями, но не привязан к странице игрока или организатора.
+                </p>
+                <div className="team-actions-row" style={{ marginTop: 16 }}>
+                  <button className="btn btn-secondary" onClick={() => navigate("/")}>
+                    На главную
+                  </button>
+                </div>
+                <div className="tournament-meta" style={{ marginTop: 16 }}>
+                  <div>Роль: {roleLabel}</div>
+                  <div>Электронная почта: {currentSubject || "Не указана"}</div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

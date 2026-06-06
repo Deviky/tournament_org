@@ -32,12 +32,12 @@ export default function ForgotPage() {
         {!sent ? (
           <>
             <p style={{ marginBottom: 12, color: "#8b949e", fontSize: 13 }}>
-              Введите email, мы отправим инструкцию для сброса пароля
+              Введите электронную почту, и мы отправим инструкцию для сброса пароля
             </p>
 
             <input
               className="auth-input"
-              placeholder="Email"
+              placeholder="Электронная почта"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />

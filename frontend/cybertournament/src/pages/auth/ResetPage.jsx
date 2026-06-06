@@ -19,7 +19,7 @@ export default function ResetPage() {
     if (!password.trim()) return "Введите пароль";
     if (!confirmPassword.trim()) return "Подтвердите пароль";
     if (password !== confirmPassword) return "Пароли не совпадают";
-    if (!token) return "Неверная ссылка сброса";
+    if (!token) return "Некорректная ссылка для сброса";
     return null;
   };
 
@@ -100,7 +100,7 @@ export default function ResetPage() {
               border: "1px solid rgba(88, 166, 255, 0.35)",
             }}
           >
-            Пароль успешно изменён. Перенаправляем на вход...
+            Пароль успешно изменен. Перенаправляем на вход...
           </div>
         )}
       </div>

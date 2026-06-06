@@ -310,30 +310,18 @@ export default function TeamPage() {
       return;
     }
 
-    if (
-      !window.confirm(
-        "Пометить команду как удалённую? Она исчезнет из списка активных команд."
-      )
-    ) {
+    if (!window.confirm("Удалить команду? Она исчезнет из списка команд для пользователей.")) {
       return;
     }
 
     await runAction(
       "delete-team",
-      () => teamApi.updateStatus(currentUserId, team.id, "DELETED"),
-      "Команда помечена как удалённая"
-    );
-  };
-
-  const handleRestoreTeam = async () => {
-    if (!ownCaptain) {
-      return;
-    }
-
-    await runAction(
-      "restore-team",
-      () => teamApi.updateStatus(currentUserId, team.id, "ACTIVE"),
-      "Команда снова активна"
+      async () => {
+        await teamApi.updateStatus(currentUserId, team.id, "DELETED");
+        navigate("/teams");
+        return null;
+      },
+      "Команда удалена"
     );
   };
 
@@ -617,66 +605,47 @@ export default function TeamPage() {
                 <div className="team-status-manager">
                   <p className="team-note">
                     Капитан может временно скрыть команду из общего списка, снова открыть
-                    набор игроков или пометить команду как удалённую.
+                    набор игроков или удалить команду.
                   </p>
 
-                  {team.status !== "DELETED" ? (
-                    <>
-                      <div className="team-status-options">
-                        {TEAM_STATUS_OPTIONS.map((option) => (
-                          <label
-                            key={option.value}
-                            className={`team-status-option ${
-                              statusDraft === option.value ? "active" : ""
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="team-status"
-                              value={option.value}
-                              checked={statusDraft === option.value}
-                              onChange={(event) => setStatusDraft(event.target.value)}
-                            />
-                            <strong>{option.title}</strong>
-                            <span>{option.description}</span>
-                          </label>
-                        ))}
-                      </div>
+                  <div className="team-status-options">
+                    {TEAM_STATUS_OPTIONS.map((option) => (
+                      <label
+                        key={option.value}
+                        className={`team-status-option ${
+                          statusDraft === option.value ? "active" : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="team-status"
+                          value={option.value}
+                          checked={statusDraft === option.value}
+                          onChange={(event) => setStatusDraft(event.target.value)}
+                        />
+                        <strong>{option.title}</strong>
+                        <span>{option.description}</span>
+                      </label>
+                    ))}
+                  </div>
 
-                      <div className="team-member-actions">
-                        <button
-                          className="btn btn-primary"
-                          onClick={handleSaveStatus}
-                          disabled={actionKey === "status" || statusDraft === team.status}
-                        >
-                          {actionKey === "status" ? "Сохраняем..." : "Сохранить статус"}
-                        </button>
+                  <div className="team-member-actions">
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleSaveStatus}
+                      disabled={actionKey === "status" || statusDraft === team.status}
+                    >
+                      {actionKey === "status" ? "Сохраняем..." : "Сохранить статус"}
+                    </button>
 
-                        <button
-                          className="btn btn-secondary"
-                          onClick={handleDeleteTeam}
-                          disabled={actionKey === "delete-team"}
-                        >
-                          {actionKey === "delete-team"
-                            ? "Обновляем..."
-                            : "Пометить как удалённую"}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="team-feedback info">
-                      Команда уже помечена как удалённая и скрыта из общего списка.
-                      <div className="team-member-actions top-gap">
-                        <button
-                          className="btn btn-primary"
-                          onClick={handleRestoreTeam}
-                          disabled={actionKey === "restore-team"}
-                        >
-                          {actionKey === "restore-team" ? "Возвращаем..." : "Вернуть в активные"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleDeleteTeam}
+                      disabled={actionKey === "delete-team"}
+                    >
+                      {actionKey === "delete-team" ? "Удаляем..." : "Удалить команду"}
+                    </button>
+                  </div>
                 </div>
               ) : ownMember ? (
                 <p className="team-note">

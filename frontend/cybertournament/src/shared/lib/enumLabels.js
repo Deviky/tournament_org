@@ -1,11 +1,11 @@
 export const tournamentStatusLabels = {
   CREATED: "Скоро",
-  REGISTRATION: "Идёт регистрация",
+  REGISTRATION: "Идет регистрация",
   REGISTRATION_CLOSED: "Регистрация закрыта",
   BRACKET_CREATED: "Сетка подготовлена",
   RUNNING: "Проводится",
-  FINISHED: "Завершён",
-  CANCEL: "Отменён",
+  FINISHED: "Завершен",
+  CANCEL: "Отменен",
   BANNED: "Заблокирован",
 };
 
@@ -27,11 +27,11 @@ export const teamTypeLabels = {
 
 export const teamPlayerStatusLabels = {
   ACTIVE: "Активен",
-  INVITED: "Приглашён",
+  INVITED: "Приглашен",
   REQUESTED: "Ожидает одобрения",
   LEAVED: "Покинул команду",
-  KICKED: "Исключён",
-  CANCELED: "Отклонён",
+  KICKED: "Исключен",
+  CANCELED: "Отклонен",
 };
 
 export const tournamentTeamStatusLabels = {
@@ -43,9 +43,9 @@ export const tournamentTeamStatusLabels = {
 
 export const matchStatusLabels = {
   COMING: "Скоро",
-  RUNNING: "Идёт",
-  FINISHED: "Завершён",
-  CANCELED: "Отменён",
+  RUNNING: "Идет",
+  FINISHED: "Завершен",
+  CANCELED: "Отменен",
 };
 
 export const matchResultLabels = {

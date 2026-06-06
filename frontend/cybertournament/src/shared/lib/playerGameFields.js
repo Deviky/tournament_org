@@ -1,12 +1,12 @@
 export const GAME_FIELDS_CONFIG = {
   CS2: [
-    { key: "STEAM", label: "Steam URL", required: true },
-    { key: "FACEIT", label: "Faceit URL", required: false },
+    { key: "STEAM", label: "Ссылка на Steam", required: true },
+    { key: "FACEIT", label: "Ссылка на Faceit", required: false },
   ],
   DOTA2: [
-    { key: "STEAM", label: "Steam URL", required: true },
-    { key: "DOTA_ID", label: "Dota ID", required: true },
-    { key: "DOTABUFF", label: "Dotabuff URL", required: false },
+    { key: "STEAM", label: "Ссылка на Steam", required: true },
+    { key: "DOTA_ID", label: "ID в Dota", required: true },
+    { key: "DOTABUFF", label: "Ссылка на Dotabuff", required: false },
   ],
 };
 

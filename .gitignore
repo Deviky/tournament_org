@@ -42,3 +42,8 @@ coverage/
 
 # Generated test/debug output
 **/test-output/
+
+# Python artifacts
+__pycache__/
+**/__pycache__/
+demo_seed.py

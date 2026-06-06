@@ -10,6 +10,7 @@ import { teamApi } from "@/shared/api/teamApi";
 import { getErrorMessage } from "@/shared/api/client";
 import { useAuthStore } from "@/app/store/authStore";
 import { getTeamCaptain } from "@/shared/lib/teamUtils";
+import { isStaffRole } from "@/shared/lib/authIdentity";
 import {
   translateTournamentStatus,
   translateTournamentType,
@@ -39,6 +40,7 @@ export default function TournamentPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [leavingTeamId, setLeavingTeamId] = useState(null);
+  const [banningTournament, setBanningTournament] = useState(false);
   const [registrationError, setRegistrationError] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState("");
   const [loading, setLoading] = useState(true);
@@ -145,6 +147,11 @@ export default function TournamentPage() {
     tournament?.status === "REGISTRATION" &&
     eligibleTeams.length > 0;
 
+  const canBanTournament =
+    isStaffRole(currentRole) &&
+    tournament?.status !== "BANNED" &&
+    tournament?.status !== "FINISHED";
+
   const runningMatches = useMemo(
     () => (matches || []).filter((match) => match?.status === "RUNNING"),
     [matches]
@@ -200,6 +207,33 @@ export default function TournamentPage() {
       setRegistrationError(getErrorMessage(err, "Не удалось вывести команду из турнира"));
     } finally {
       setLeavingTeamId(null);
+    }
+  };
+
+  const handleBanTournament = async () => {
+    if (!tournament || !canBanTournament) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Заблокировать турнир «${tournament.name}»? После этого он станет недоступен для обычной работы.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setBanningTournament(true);
+      setRegistrationError("");
+      setRegistrationSuccess("");
+      await tournamentApi.ban(tournament.id);
+      await loadTournament();
+      setRegistrationSuccess(`Турнир «${tournament.name}» был заблокирован.`);
+    } catch (err) {
+      setRegistrationError(getErrorMessage(err, "Не удалось заблокировать турнир"));
+    } finally {
+      setBanningTournament(false);
     }
   };
 
@@ -339,6 +373,29 @@ export default function TournamentPage() {
                 Команд: {tournament.minTeams} - {tournament.maxTeams}
               </p>
             </div>
+
+            {isStaffRole(currentRole) && (
+              <div className="section">
+                <h3>Модерация</h3>
+                <p className="muted-text">
+                  У сотрудников есть право быстро остановить проблемный турнир прямо с этой
+                  страницы.
+                </p>
+                <button
+                  className="btn btn-danger"
+                  disabled={!canBanTournament || banningTournament}
+                  onClick={handleBanTournament}
+                >
+                  {banningTournament
+                    ? "Блокируем..."
+                    : tournament.status === "BANNED"
+                      ? "Турнир уже заблокирован"
+                      : tournament.status === "FINISHED"
+                        ? "Завершенный турнир не блокируется"
+                        : "Заблокировать турнир"}
+                </button>
+              </div>
+            )}
 
             <div className="section">
               {isTournamentOrganizer ? (

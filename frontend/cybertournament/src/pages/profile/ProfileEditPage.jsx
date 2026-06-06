@@ -163,7 +163,7 @@ export default function ProfileEditPage() {
 
       for (const field of config) {
         if (field.required && !String(game.links[field.key] || "").trim()) {
-          return `${field.label} обязателен`;
+          return `${field.label} обязательна`;
         }
       }
     }
@@ -209,7 +209,7 @@ export default function ProfileEditPage() {
         );
       }
 
-      setSuccess("Профиль обновлён");
+      setSuccess("Профиль обновлен");
     } catch (err) {
       setError(getErrorMessage(err, "Не удалось сохранить профиль"));
     } finally {
@@ -248,14 +248,16 @@ export default function ProfileEditPage() {
           <div className="section">
             <h3>Редактирование профиля</h3>
             <p>
-              Для роли <strong>{roleLabel}</strong> отдельная форма редактирования пока не предусмотрена.
+              Для роли <strong>{roleLabel}</strong> отдельная форма редактирования
+              пока не предусмотрена.
             </p>
             <p>
-              Этот аккаунт используется как служебный и не привязан к профилю игрока или организатора.
+              Этот аккаунт используется как служебный и не привязан к профилю
+              игрока или организатора.
             </p>
             <div className="tournament-meta" style={{ marginTop: 16 }}>
               <div>Роль: {roleLabel}</div>
-              <div>Email: {currentSubject || "Не указан"}</div>
+              <div>Электронная почта: {currentSubject || "Не указана"}</div>
             </div>
             <div className="team-actions-row" style={{ marginTop: 20 }}>
               <button className="btn btn-secondary" onClick={() => navigate("/profile")}>
@@ -281,7 +283,11 @@ export default function ProfileEditPage() {
             <div>
               <div className="tournament-title">Редактирование профиля</div>
               <div className="tournament-meta">
-                <div>{currentRole === "PLAYER" ? "Профиль игрока" : "Профиль организатора"}</div>
+                <div>
+                  {currentRole === "PLAYER"
+                    ? "Профиль игрока"
+                    : "Профиль организатора"}
+                </div>
               </div>
             </div>
 

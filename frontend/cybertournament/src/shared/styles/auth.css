@@ -109,6 +109,88 @@ textarea.auth-input {
   border-radius: var(--radius);
 }
 
+.auth-info {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #9ed0ff;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  border-radius: var(--radius);
+}
+
+.auth-success {
+  padding: 22px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(35, 134, 54, 0.4);
+  background:
+    radial-gradient(circle at top, rgba(88, 166, 255, 0.16), transparent 48%),
+    linear-gradient(180deg, rgba(35, 134, 54, 0.2), rgba(35, 134, 54, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  text-align: center;
+}
+
+.auth-success-badge {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #d2f7db;
+  background: linear-gradient(180deg, #2ea043, #238636);
+  box-shadow: 0 14px 30px rgba(35, 134, 54, 0.3);
+}
+
+.auth-success-title {
+  margin: 0 0 10px;
+  color: var(--text-title);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.auth-success-text {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.auth-success-email {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  background: rgba(13, 17, 23, 0.65);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.auth-resend-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(88, 166, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(13, 17, 23, 0.55);
+}
+
+.auth-hint {
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 /* =========================
    BUTTONS
 ========================= */
@@ -130,6 +212,13 @@ textarea.auth-input {
 
 .auth-btn:hover {
   background: #2ea043;
+}
+
+.auth-btn:disabled,
+.btn:disabled,
+.remove-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* =========================

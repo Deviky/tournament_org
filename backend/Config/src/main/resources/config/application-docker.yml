@@ -5,6 +5,9 @@ eureka:
 
 spring:
   datasource:
-    url: jdbc:postgresql://host.docker.internal:5432/Tournament_org
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://host.docker.internal:5432/Tournament_org}
   redis:
-    host: host.docker.internal
+    host: ${SPRING_REDIS_HOST:host.docker.internal}
+    port: ${SPRING_REDIS_PORT:6379}
+    password: ${SPRING_REDIS_PASSWORD:}
+    database: ${SPRING_REDIS_DATABASE:0}

@@ -337,6 +337,10 @@ public class TeamService {
             TeamPlayer captain = requireActiveCaptain(teamId, selfPlayerId);
             Team team = captain.getTeam();
 
+            if (team.getStatus() == TeamStatus.DELETED && status != TeamStatus.DELETED) {
+                return new ApiResponse<>("Удалённую команду нельзя восстановить", null, true);
+            }
+
             if (status == TeamStatus.ACTIVE && getActiveTeamMembers(teamId).isEmpty()) {
                 return new ApiResponse<>("Нельзя активировать пустую команду", null, true);
             }
@@ -367,6 +371,26 @@ public class TeamService {
     }
 
     // ------------------ Получение команд с ACTIVE игроками ------------------
+    public ApiResponse<TeamDto> getPublicTeamWithPlayers(Long teamId) {
+        try {
+            Team team = teamRepository.findById(teamId)
+                    .orElseThrow(() -> new Exception("Команда не найдена"));
+
+            if (team.getStatus() == TeamStatus.DELETED) {
+                return new ApiResponse<>("Команда не найдена", null, true);
+            }
+
+            List<TeamPlayer> members = teamPlayerRepository.findByTeamId(teamId);
+            List<TeamPlayer> activeMembers = members.stream()
+                    .filter(tp -> tp.getStatus() == TeamPlayerStatus.ACTIVE)
+                    .toList();
+
+            return new ApiResponse<>("Команда найдена", mapToTeamDto(team, activeMembers), false);
+        } catch (Exception ex) {
+            return new ApiResponse<>("Ошибка при получении команды: " + ex.getMessage(), null, true);
+        }
+    }
+
     public ApiResponse<List<TeamDto>> getTeamsWithPlayersByIds(List<Long> teamIds) {
         try {
             if (teamIds == null || teamIds.isEmpty()) {

@@ -103,7 +103,7 @@ public class TeamController {
 
     @GetMapping("/public/get/{teamId}")
     public ResponseEntity<ApiResponse<TeamDto>> getTeam(@PathVariable Long teamId) {
-        ApiResponse<TeamDto> response = teamService.getTeamWithPlayers(teamId);
+        ApiResponse<TeamDto> response = teamService.getPublicTeamWithPlayers(teamId);
         return ResponseEntity.status(response.isError() ? HttpStatus.BAD_REQUEST : HttpStatus.OK).body(response);
     }
 

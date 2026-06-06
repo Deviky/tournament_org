@@ -1,20 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { authApi } from "@/shared/api/authApi";
 import { gameApi } from "@/shared/api/gameApi";
 import { getErrorMessage } from "@/shared/api/client";
 import "@/shared/styles/auth.css";
 
+const RESEND_COOLDOWN_SECONDS = 60;
+
 const GAME_FIELDS_CONFIG = {
   CS2: [
-    { key: "STEAM", label: "Steam URL", required: true },
-    { key: "FACEIT", label: "Faceit URL", required: false },
+    { key: "STEAM", label: "Ссылка на Steam", required: true },
+    { key: "FACEIT", label: "Ссылка на Faceit", required: false },
   ],
   DOTA2: [
-    { key: "STEAM", label: "Steam URL", required: true },
-    { key: "DOTA_ID", label: "Dota ID", required: true },
-    { key: "DOTABUFF", label: "Dotabuff URL", required: false },
+    { key: "STEAM", label: "Ссылка на Steam", required: true },
+    { key: "DOTA_ID", label: "ID в Dota", required: true },
+    { key: "DOTABUFF", label: "Ссылка на Dotabuff", required: false },
   ],
 };
+
+const createGame = () => ({
+  id: crypto.randomUUID(),
+  gameId: "",
+  links: {},
+});
 
 const normalizeGameName = (value) =>
   String(value || "")
@@ -36,13 +45,8 @@ const getGameConfigKey = (gameName) => {
   return null;
 };
 
-const createGame = () => ({
-  id: crypto.randomUUID(),
-  gameId: "",
-  links: {},
-});
-
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [type, setType] = useState("player");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +57,12 @@ export default function RegisterPage() {
   const [games, setGames] = useState([createGame()]);
   const [availableGames, setAvailableGames] = useState([]);
   const [gamesLoading, setGamesLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [successEmail, setSuccessEmail] = useState("");
 
   useEffect(() => {
     const loadGames = async () => {
@@ -71,6 +80,18 @@ export default function RegisterPage() {
     loadGames();
   }, []);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
   const selectedGameIds = useMemo(
     () => games.map((game) => String(game.gameId || "")).filter(Boolean),
     [games]
@@ -83,6 +104,16 @@ export default function RegisterPage() {
     }
 
     return GAME_FIELDS_CONFIG[getGameConfigKey(game.name)] || null;
+  };
+
+  const resetRegistrationForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setNickname("");
+    setOrganizerName("");
+    setDescription("");
+    setGames([createGame()]);
   };
 
   const addGame = () => {
@@ -135,7 +166,7 @@ export default function RegisterPage() {
 
   const validate = () => {
     if (!email.trim()) {
-      return "Email обязателен";
+      return "Электронная почта обязательна";
     }
 
     if (!password.trim()) {
@@ -175,7 +206,7 @@ export default function RegisterPage() {
 
         for (const field of config) {
           if (field.required && !String(game.links[field.key] || "").trim()) {
-            return `${field.label} обязателен`;
+            return `${field.label} обязательна`;
           }
         }
       }
@@ -188,16 +219,39 @@ export default function RegisterPage() {
     return null;
   };
 
+  const handleResendConfirmation = async (targetEmail) => {
+    if (!targetEmail || resendCooldown > 0) {
+      return;
+    }
+
+    try {
+      setResendLoading(true);
+      setError("");
+      setInfo("");
+      await authApi.resend(targetEmail);
+      setInfo("Письмо с подтверждением отправлено повторно. Проверьте вашу почту.");
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (e) {
+      setError(getErrorMessage(e, "Не удалось отправить письмо повторно"));
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const register = async () => {
     const validationError = validate();
     if (validationError) {
+      setSuccessEmail("");
       setError(validationError);
       return;
     }
 
     setError("");
+    setInfo("");
+    setSubmitting(true);
 
     try {
+      const registeredEmail = email.trim();
       const payload =
         type === "player"
           ? {
@@ -217,9 +271,14 @@ export default function RegisterPage() {
         await authApi.registerOrg(payload);
       }
 
-      alert("Успешно");
+      setSuccessEmail(registeredEmail);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      resetRegistrationForm();
     } catch (e) {
+      setSuccessEmail("");
       setError(getErrorMessage(e, "Ошибка регистрации"));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -229,144 +288,195 @@ export default function RegisterPage() {
         <h2 className="auth-title">Регистрация</h2>
 
         {error && <div className="auth-error">{error}</div>}
+        {info && <div className="auth-info">{info}</div>}
 
-        <div className="row" style={{ marginBottom: 15 }}>
-          <button
-            className={`btn ${type === "player" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setType("player")}
-          >
-            Игрок
-          </button>
+        {successEmail ? (
+          <div className="auth-success">
+            <div className="auth-success-badge">✓</div>
+            <h3 className="auth-success-title">Проверьте вашу почту</h3>
+            <p className="auth-success-text">
+              Мы отправили письмо для подтверждения регистрации на адрес:
+            </p>
+            <p className="auth-success-email">{successEmail}</p>
+            <p className="auth-success-text">
+              Если письмо не пришло сразу, попробуйте отправить его повторно.
+            </p>
 
-          <button
-            className={`btn ${type === "org" ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setType("org")}
-          >
-            Организатор
-          </button>
-        </div>
-
-        <input
-          className="auth-input"
-          placeholder="Email *"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-
-        <input
-          className="auth-input"
-          type="password"
-          placeholder="Пароль *"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-
-        <input
-          className="auth-input"
-          type="password"
-          placeholder="Подтвердите пароль *"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-        />
-
-        {type === "player" && (
+            <div className="auth-actions">
+              <button className="auth-btn" onClick={() => navigate("/login")}>
+                Перейти ко входу
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleResendConfirmation(successEmail)}
+                disabled={resendLoading || resendCooldown > 0}
+              >
+                {resendLoading
+                  ? "Отправляем..."
+                  : resendCooldown > 0
+                    ? `Отправить повторно через ${resendCooldown} c`
+                    : "Отправить письмо повторно"}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSuccessEmail("");
+                  setInfo("");
+                  setError("");
+                  setResendCooldown(0);
+                }}
+              >
+                Зарегистрировать еще аккаунт
+              </button>
+            </div>
+          </div>
+        ) : (
           <>
+            <div className="row" style={{ marginBottom: 15 }}>
+              <button
+                className={`btn ${type === "player" ? "btn-primary" : "btn-secondary"}`}
+                onClick={() => setType("player")}
+                disabled={submitting}
+              >
+                Игрок
+              </button>
+
+              <button
+                className={`btn ${type === "org" ? "btn-primary" : "btn-secondary"}`}
+                onClick={() => setType("org")}
+                disabled={submitting}
+              >
+                Организатор
+              </button>
+            </div>
+
             <input
               className="auth-input"
-              placeholder="Никнейм *"
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
+              placeholder="Электронная почта *"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
 
-            <h3 style={{ margin: "10px 0" }}>Игры</h3>
+            <input
+              className="auth-input"
+              type="password"
+              placeholder="Пароль *"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
 
-            {games.map((game) => {
-              const config = getConfigByGameId(game.gameId);
+            <input
+              className="auth-input"
+              type="password"
+              placeholder="Подтвердите пароль *"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
 
-              return (
-                <div
-                  key={game.id}
-                  className="card"
-                  style={{ marginBottom: 15, position: "relative" }}
+            {type === "player" && (
+              <>
+                <input
+                  className="auth-input"
+                  placeholder="Никнейм *"
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                />
+
+                <h3 style={{ margin: "10px 0" }}>Игры</h3>
+
+                {games.map((game) => {
+                  const config = getConfigByGameId(game.gameId);
+
+                  return (
+                    <div
+                      key={game.id}
+                      className="card"
+                      style={{ marginBottom: 15, position: "relative" }}
+                    >
+                      <button
+                        className="remove-btn"
+                        onClick={() => removeGame(game.id)}
+                        disabled={games.length === 1 || submitting}
+                      >
+                        x
+                      </button>
+
+                      <select
+                        className="auth-input"
+                        value={game.gameId}
+                        onChange={(event) => selectGame(game.id, event.target.value)}
+                        disabled={gamesLoading || submitting}
+                      >
+                        <option value="">Выберите игру *</option>
+                        {availableGames.map((availableGame) => {
+                          const isSelectedElsewhere =
+                            selectedGameIds.includes(String(availableGame.id)) &&
+                            String(game.gameId) !== String(availableGame.id);
+
+                          return (
+                            <option
+                              key={availableGame.id}
+                              value={availableGame.id}
+                              disabled={isSelectedElsewhere}
+                            >
+                              {availableGame.name}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      {config?.map((field) => (
+                        <input
+                          key={field.key}
+                          className="auth-input"
+                          placeholder={field.label + (field.required ? " *" : "")}
+                          value={game.links[field.key] || ""}
+                          onChange={(event) =>
+                            updateField(game.id, field.key, event.target.value)
+                          }
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+
+                <button
+                  className="btn btn-secondary"
+                  onClick={addGame}
+                  disabled={
+                    submitting ||
+                    gamesLoading ||
+                    games.length >= availableGames.length
+                  }
                 >
-                  <button
-                    className="remove-btn"
-                    onClick={() => removeGame(game.id)}
-                    disabled={games.length === 1}
-                  >
-                    x
-                  </button>
+                  + Добавить игру
+                </button>
+              </>
+            )}
 
-                  <select
-                    className="auth-input"
-                    value={game.gameId}
-                    onChange={(event) => selectGame(game.id, event.target.value)}
-                    disabled={gamesLoading}
-                  >
-                    <option value="">Выберите игру *</option>
-                    {availableGames.map((availableGame) => {
-                      const isSelectedElsewhere =
-                        selectedGameIds.includes(String(availableGame.id)) &&
-                        String(game.gameId) !== String(availableGame.id);
+            {type === "org" && (
+              <>
+                <input
+                  className="auth-input"
+                  placeholder="Название *"
+                  value={organizerName}
+                  onChange={(event) => setOrganizerName(event.target.value)}
+                />
 
-                      return (
-                        <option
-                          key={availableGame.id}
-                          value={availableGame.id}
-                          disabled={isSelectedElsewhere}
-                        >
-                          {availableGame.name}
-                        </option>
-                      );
-                    })}
-                  </select>
+                <textarea
+                  className="auth-input"
+                  placeholder="Описание"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </>
+            )}
 
-                  {config?.map((field) => (
-                    <input
-                      key={field.key}
-                      className="auth-input"
-                      placeholder={field.label + (field.required ? " *" : "")}
-                      value={game.links[field.key] || ""}
-                      onChange={(event) =>
-                        updateField(game.id, field.key, event.target.value)
-                      }
-                    />
-                  ))}
-                </div>
-              );
-            })}
-
-            <button
-              className="btn btn-secondary"
-              onClick={addGame}
-              disabled={gamesLoading || games.length >= availableGames.length}
-            >
-              + Добавить игру
+            <button className="auth-btn" onClick={register} disabled={submitting}>
+              {submitting ? "Отправляем..." : "Зарегистрироваться"}
             </button>
           </>
         )}
-
-        {type === "org" && (
-          <>
-            <input
-              className="auth-input"
-              placeholder="Название *"
-              value={organizerName}
-              onChange={(event) => setOrganizerName(event.target.value)}
-            />
-
-            <textarea
-              className="auth-input"
-              placeholder="Описание"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </>
-        )}
-
-        <button className="auth-btn" onClick={register}>
-          Зарегистрироваться
-        </button>
       </div>
     </div>
   );

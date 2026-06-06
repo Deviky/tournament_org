@@ -25,7 +25,11 @@ export default function ConfirmPage() {
 
         navigate("/", { replace: true });
       } catch (e) {
-        console.error("CONFIRM ERROR:", getErrorMessage(e, "Ошибка подтверждения email"), e);
+        console.error(
+          "Ошибка подтверждения:",
+          getErrorMessage(e, "Не удалось подтвердить электронную почту"),
+          e
+        );
         navigate("/login", { replace: true });
       }
     };
@@ -37,5 +41,5 @@ export default function ConfirmPage() {
     }
   }, [navigate, params, setSession]);
 
-  return <h2>Подтверждение email...</h2>;
+  return <h2>Подтверждаем электронную почту...</h2>;
 }

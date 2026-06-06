@@ -1,16 +1,131 @@
-# React + Vite
+# Frontend Cybertournament
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend-часть проекта представляет собой SPA-приложение на `React + Vite` для работы с турнирами, командами, матчами и профилями пользователей.
 
-Currently, two official plugins are available:
+## Основные возможности
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- просмотр списка турниров и карточек соревнований;
+- страницы турнира с сеткой, участниками и результатами;
+- регистрация, вход, подтверждение почты и восстановление пароля;
+- просмотр и редактирование собственного профиля;
+- просмотр профилей игроков и организаций;
+- создание команды и управление её составом;
+- создание турнира и страницы управления турниром;
+- страницы матчей и управление статусами матчей.
 
-## React Compiler
+## Технологии
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `React 18`
+- `Vite 5`
+- `React Router`
+- `Zustand`
+- `Axios`
 
-## Expanding the ESLint configuration
+## Запуск
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Установка зависимостей:
+
+```bash
+npm install
+```
+
+Запуск dev-сервера:
+
+```bash
+npm run dev
+```
+
+Сборка production-версии:
+
+```bash
+npm run build
+```
+
+По умолчанию приложение открывается на:
+
+```text
+http://localhost:5173
+```
+
+## Подключение к backend
+
+Базовый URL API сейчас задан в файле:
+
+- [src/shared/api/client.js](src/shared/api/client.js)
+
+По умолчанию frontend обращается к:
+
+```text
+http://localhost:8777
+```
+
+Это адрес `API Gateway` backend-части.
+
+## Основные маршруты
+
+В проекте реализованы следующие основные страницы:
+
+- `/` — главная страница;
+- `/login` — вход;
+- `/register` — регистрация;
+- `/confirm` — подтверждение почты;
+- `/forgot` — запрос восстановления пароля;
+- `/reset` — смена пароля;
+- `/teams` — список команд;
+- `/teams/:id` — страница команды;
+- `/create-team` — создание команды;
+- `/tournaments/:id` — страница турнира;
+- `/tournaments/create` — создание турнира;
+- `/tournaments/:id/manage` — управление турниром;
+- `/matches/:id` — страница матча;
+- `/matches/:id/manage` — управление матчем;
+- `/players/:id` — профиль игрока;
+- `/organizations/:id` — профиль организации;
+- `/profile` — собственный профиль;
+- `/profile/edit` — редактирование профиля;
+- `/faq` — страница FAQ.
+
+Часть маршрутов защищена через `PrivateRoute` и требует авторизации.
+
+## Структура каталога `src`
+
+```text
+src/
+├─ app/             # корневая логика приложения, роутинг, сторы
+├─ assets/          # изображения и статические ресурсы
+├─ pages/           # страницы приложения
+├─ shared/
+│  ├─ api/          # API-клиенты по доменам
+│  ├─ lib/          # утилиты и преобразования данных
+│  ├─ styles/       # CSS-стили
+│  └─ ui/           # переиспользуемые UI-компоненты
+├─ index.css
+├─ main.jsx
+└─ styles/
+```
+
+## Работа с авторизацией
+
+Во frontend реализованы:
+
+- хранение `accessToken` и `refreshToken` в `localStorage`;
+- автоматическая подстановка `Authorization: Bearer ...` в запросы;
+- попытка silent refresh при истечении access token;
+- перенаправление на `/login` при неуспешном обновлении токена.
+
+Логика находится в:
+
+- [src/shared/api/client.js](src/shared/api/client.js)
+- [src/app/store/authStore.js](src/app/store/authStore.js)
+
+## Что полезно знать при разработке
+
+- alias `@` указывает на каталог `src`;
+- проект использует обычный JavaScript без TypeScript;
+- стили разделены по страницам и доменным компонентам;
+- часть страниц работает с богатыми структурами данных турниров, команд и матчей, приходящими из backend-микросервисов.
+
+## Связанные документы
+
+- [../../README.md](../../README.md) — корневой README проекта;
+- [../../backend/README.md](../../backend/README.md) — описание backend-части.
